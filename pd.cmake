@@ -2,7 +2,7 @@
 # The path to this file.
 set(PD_CMAKE_PATH ${CMAKE_CURRENT_LIST_DIR})
 # The path to Pure Data sources.
-set(PD_SOURCES_PATH)
+#set(PD_SOURCES_PATH)
 # The output path for the externals.
 set(PD_OUTPUT_PATH)
 if(WIN32)
@@ -15,6 +15,23 @@ if(WIN32)
 	endif()
 endif()
 
+if(${APPLE})
+	# For Libraries installed using brew
+	include_directories(/usr/local/include)
+	link_directories(/usr/local/lib)
+	if(NOT PD_SOURCE_PATH)
+		file(GLOB PD_INSTALLER "/Applications/Pd*.app")
+		if(PD_INSTALLER)
+			foreach(app ${PD_INSTALLER})
+				get_filename_component(PD_SOURCE_PATH "${app}/Contents/Resources/src/" ABSOLUTE)
+			endforeach()
+		else()
+			message(FATAL_ERROR "PD_SOURCE_PATH not set and no Pd.app found in /Applications")
+		endif()
+		message(STATUS "PD_SOURCE_PATH not set, using ${PD_SOURCE_PATH}")
+		set (PD_SOURCES_PATH ${PD_SOURCE_PATH})
+	endif()
+endif()
 # The function adds an external to the project.
 # PROJECT_NAME is the name of your project (for example: freeverb_project)
 # EXTERNAL_NAME is the name of your external (for example: freeverb~)
@@ -23,27 +40,29 @@ endif()
 # add_external(freeverb_project freeverb~ userpath/freeverb~.c userpath/otherfile.c)
 # later see how to manage relative and absolute path
 function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
+
     set(ALL_SOURCES ${EXTERNAL_SOURCES}) 
     list(APPEND ALL_SOURCES ${ARGN})
 
     source_group(src FILES ${ALL_SOURCES})
     add_library(${PROJECT_NAME} SHARED ${ALL_SOURCES})
 
-	# Includes the path to Pure Data sources.
-	target_include_directories(${PROJECT_NAME} PRIVATE ${PD_SOURCES_PATH})
-
 	# Defines plateform specifix suffix and the linking necessities.
 	set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
+	target_include_directories(${PROJECT_NAME} PRIVATE ${PD_SOURCES_PATH})
+	message(STATUS "ADD_PD_EXTERNAL: ${PD_SOURCES_PATH}")
+
 	if(${APPLE})
-		if(NOT PD_SOURCE_PATH)
-			set(PD_SOURCE_PATH "/Applications/Pd*.app/Contents/Resources/src")
-		endif()
+		# Pd external extensions
         if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
             set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".d_arm64")
         else()
             set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".d_amd64")
         endif()
+
 		set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
+
+
 	elseif(${UNIX})
         if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
             if (CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -77,6 +96,8 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
 	if(PD_FLOATSIZE64)
 		set_property(TARGET ${PROJECT_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " -DPD_FLOATSIZE=64")
 	endif()
+
+	# Includes the path to Pure Data sources.
 
 	# Defines the name of the external.
 	# On XCode with CMake < 3.4 if the name of an external ends with tilde but doesn't have a dot, the name must be 'name~'.
