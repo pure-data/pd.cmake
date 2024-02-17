@@ -23,6 +23,7 @@ endif()
 # add_external(freeverb_project freeverb~ "userpath/freeverb~.c userpath/otherfile.c")
 # later see how to manage relative and absolute path
 function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
+    set(EXTERNAL_SOURCES ${ARGN})
 	source_group(src FILES ${EXTERNAL_SOURCES})
 	add_library(${PROJECT_NAME} SHARED ${EXTERNAL_SOURCES})
 
