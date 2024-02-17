@@ -20,12 +20,14 @@ endif()
 # EXTERNAL_NAME is the name of your external (for example: freeverb~)
 # EXTERNAL_SOURCES are the source files (for example: freeverb~.c)
 # The function should be call:
-# add_external(freeverb_project freeverb~ "userpath/freeverb~.c userpath/otherfile.c")
+# add_external(freeverb_project freeverb~ userpath/freeverb~.c userpath/otherfile.c)
 # later see how to manage relative and absolute path
 function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
-    set(EXTERNAL_SOURCES ${ARGN})
-	source_group(src FILES ${EXTERNAL_SOURCES})
-	add_library(${PROJECT_NAME} SHARED ${EXTERNAL_SOURCES})
+    set(ALL_SOURCES ${EXTERNAL_SOURCES}) 
+    list(APPEND ALL_SOURCES ${ARGN})
+
+    source_group(src FILES ${ALL_SOURCES})
+    add_library(${PROJECT_NAME} SHARED ${ALL_SOURCES})
 
 	# Includes the path to Pure Data sources.
 	target_include_directories(${PROJECT_NAME} PRIVATE ${PD_SOURCES_PATH})
