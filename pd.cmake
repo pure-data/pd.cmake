@@ -1,6 +1,7 @@
 
 # The path to this file.
 set(PD_CMAKE_PATH ${CMAKE_CURRENT_LIST_DIR})
+
 # The path to Pure Data sources.
 #set(PD_SOURCES_PATH)
 # The output path for the externals.
@@ -73,7 +74,7 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
             set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".l_amd64")
         endif()
 	elseif(${WIN32})
-        # SOMEONE USES THE 32 BITS VERSION OF PD ON WINDOWS?
+        # WIN32 is for Windows 32 and 64 bits. We just use Windows 64 bits.
 		set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".m_amd64")
 		find_library(PD_LIBRARY NAMES pd HINTS ${PD_LIB_PATH})
 		target_link_libraries(${PROJECT_NAME} ${PD_LIBRARY})
@@ -130,8 +131,43 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
 			set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${PD_OUTPUT_PATH})
 			set_target_properties(${PROJECT_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${PD_OUTPUT_PATH})
 	endforeach(OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES)
-
 endfunction(add_pd_external)
+
+function(local_deps OBJ_NAME) 
+    # get the defined SUFFIX
+    get_target_property(OBJ_EXT ${PROJECT_NAME} SUFFIX)
+    get_filename_component(CMAKE_FILE_DIR ${CMAKE_CURRENT_LIST_FILE} DIRECTORY)
+	if(${APPLE})
+        add_custom_command(
+            TARGET ${PROJECT_NAME}
+            POST_BUILD
+            COMMAND bash -E ${PD_CMAKE_PATH}/deps-scripts/localdeps.macos.sh ${CMAKE_SOURCE_DIR}/${OBJ_NAME}${OBJ_EXT} 
+            COMMENT "\nGet Dependecies for ${OBJ_NAME}${OBJ_EXT}"
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        )
+	elseif(${UNIX})
+        add_custom_command(
+            TARGET ${PROJECT_NAME}
+            POST_BUILD
+            COMMAND bash -E ${PD_CMAKE_PATH}/deps-scripts/localdeps.linux.sh ${CMAKE_SOURCE_DIR}/${OBJ_NAME}${OBJ_EXT} 
+            COMMENT "\nGet Dependecies for ${OBJ_NAME}${OBJ_EXT}"
+            WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        )
+	elseif(${WIN32})
+        if (CMAKE_GENERATOR_TOOLSET MATCHES ".*mingw64.*")
+            add_custom_command(
+                TARGET ${PROJECT_NAME}
+                POST_BUILD
+                COMMAND bash -E ${PD_CMAKE_PATH}/deps-scripts/localdeps.win.sh ${CMAKE_SOURCE_DIR}/${OBJ_NAME}${OBJ_EXT} 
+                COMMENT "\nGet Dependecies for ${OBJ_NAME}${OBJ_EXT}"
+                WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+            )
+        else()
+            message(FATAL_ERROR "Local dependencies just work inside MinGW64 for Windows")
+        endif()
+	endif()
+
+endfunction(local_deps)
 
 # The macro defines the output path of the externals.
 macro(set_pd_external_path EXTERNAL_PATH)
