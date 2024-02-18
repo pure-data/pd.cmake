@@ -50,7 +50,6 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
 	# Defines plateform specifix suffix and the linking necessities.
 	set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
 	target_include_directories(${PROJECT_NAME} PRIVATE ${PD_SOURCES_PATH})
-	message(STATUS "ADD_PD_EXTERNAL: ${PD_SOURCES_PATH}")
 
 	if(${APPLE})
 		# Pd external extensions
