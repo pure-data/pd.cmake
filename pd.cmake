@@ -6,13 +6,12 @@ set(PD_CMAKE_PATH ${CMAKE_CURRENT_LIST_DIR})
 #set(PD_SOURCES_PATH)
 # The output path for the externals.
 set(PD_OUTPUT_PATH)
-if(WIN32)
-	if(NOT PD_LIB_PATH)
-		if("${CMAKE_GENERATOR}" MATCHES "(Win64|IA64)" OR "${CMAKE_GENERATOR_PLATFORM}" MATCHES "x64" OR "$ENV{VSCMD_ARG_TGT_ARCH}" MATCHES "x64")
-			set(PD_LIB_PATH  ${PD_CMAKE_PATH}/x64)
-		else()
-			set(PD_LIB_PATH  ${PD_CMAKE_PATH}/x86)
-		endif()
+# PureData Sources
+if (${WIN32})
+	if(NOT PD_SOURCES_PATH)
+		set(PD_SOURCES_PATH "C:/Program Files/Pd/src")
+		set(PD_LIB_PATH "C:/Program Files/Pd/bin")
+		link_directories(${PD_LIB_PATH})
 	endif()
 endif()
 
@@ -20,17 +19,17 @@ if(${APPLE})
 	# For Libraries installed using brew
 	include_directories(/usr/local/include)
 	link_directories(/usr/local/lib)
-	if(NOT PD_SOURCE_PATH)
+	if(NOT PD_SOURCES_PATH)
 		file(GLOB PD_INSTALLER "/Applications/Pd*.app")
 		if(PD_INSTALLER)
 			foreach(app ${PD_INSTALLER})
-				get_filename_component(PD_SOURCE_PATH "${app}/Contents/Resources/src/" ABSOLUTE)
+				get_filename_component(PD_SOURCES_PATH "${app}/Contents/Resources/src/" ABSOLUTE)
 			endforeach()
 		else()
-			message(FATAL_ERROR "PD_SOURCE_PATH not set and no Pd.app found in /Applications")
+			message(FATAL_ERROR "PD_SOURCES_PATH not set and no Pd.app found in /Applications")
 		endif()
-		message(STATUS "PD_SOURCE_PATH not set, using ${PD_SOURCE_PATH}")
-		set (PD_SOURCES_PATH ${PD_SOURCE_PATH})
+		message(STATUS "PD_SOURCES_PATH not set, using ${PD_SOURCES_PATH}")
+		set (PD_SOURCES_PATH ${PD_SOURCES_PATH})
 	endif()
 endif()
 # The function adds an external to the project.
@@ -59,10 +58,7 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
         else()
             set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".d_amd64")
         endif()
-
 		set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
-
-
 	elseif(${UNIX})
         if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
             if (CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -74,10 +70,12 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
             set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".l_amd64")
         endif()
 	elseif(${WIN32})
+		target_link_libraries(${PROJECT_NAME} PRIVATE pd)
+
         # WIN32 is for Windows 32 and 64 bits. We just use Windows 64 bits.
 		set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".m_amd64")
-		find_library(PD_LIBRARY NAMES pd HINTS ${PD_LIB_PATH})
-		target_link_libraries(${PROJECT_NAME} ${PD_LIBRARY})
+        find_library(PD_LIBRARY NAMES pd HINTS ${PD_LIB_PATH})
+		##target_link_libraries(${PROJECT_NAME} ${PD_LIBRARY})
 	endif()
 
 	# Removes some warning for Microsoft Visual C.
@@ -86,7 +84,7 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
 	endif()
 
 	# Adds
-	if(WIN32)
+	if(${MSVC})
 		if(${CMAKE_SIZEOF_VOID_P} EQUAL 8)
 			set_property(TARGET ${PROJECT_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS " /DPD_LONGINTTYPE=\"long long\"")
 		endif()
@@ -111,7 +109,7 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
 	endif()
 
 	# Generate the function to export for Windows
-	if(${WIN32})
+	if(${MSVC})
 		if(NAME_HAS_DOT EQUAL -1)
 			string(REPLACE "~" "_tilde" EXPORT_FUNCTION "${EXTERNAL_NAME}_setup")
 		else()
@@ -154,7 +152,8 @@ function(local_deps OBJ_NAME)
             WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         )
 	elseif(${WIN32})
-        if (CMAKE_GENERATOR_TOOLSET MATCHES ".*mingw64.*")
+		if(${CMAKE_GENERATOR} STREQUAL "Ninja")
+			message(STATUS "POSSIBLE TO GET LOCALDEPS FOR NINJA")
             add_custom_command(
                 TARGET ${PROJECT_NAME}
                 POST_BUILD
@@ -163,7 +162,7 @@ function(local_deps OBJ_NAME)
                 WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
             )
         else()
-            message(FATAL_ERROR "Local dependencies just work inside MinGW64 for Windows")
+            message(STATUS "Local dependencies just work inside MinGW64 for Windows")
         endif()
 	endif()
 
