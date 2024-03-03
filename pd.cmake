@@ -32,6 +32,16 @@ if(${APPLE})
 		set (PD_SOURCES_PATH ${PD_SOURCES_PATH})
 	endif()
 endif()
+
+if (${UNIX})
+        if(NOT PD_SOURCES_PATH)
+                set(PD_SOURCES_PATH "/usr/include/pd/")
+                # set(PD_LIB_PATH "/usr/lib/pd/bin/") # do anything
+                # link_directories(${PD_LIB_PATH})
+        endif()
+endif()
+
+
 # The function adds an external to the project.
 # PROJECT_NAME is the name of your project (for example: freeverb_project)
 # EXTERNAL_NAME is the name of your external (for example: freeverb~)
