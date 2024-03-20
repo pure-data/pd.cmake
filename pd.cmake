@@ -11,7 +11,7 @@ if (${WIN32})
 	if(NOT PD_SOURCES_PATH)
 		set(PD_SOURCES_PATH "C:/Program Files/Pd/src")
 		set(PD_LIB_PATH "C:/Program Files/Pd/bin")
-		link_directories(${PD_LIB_PATH})
+		
 	endif()
 endif()
 
@@ -80,12 +80,18 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
             set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".l_amd64")
         endif()
 	elseif(${WIN32})
-		target_link_libraries(${PROJECT_NAME} PRIVATE pd)
-
+		#set(CMAKE_CXX_STANDARD_LIBRARIES "")
+		target_link_options(${PROJECT_NAME} PRIVATE
+			"-static-libgcc"
+			"-static-libstdc++"
+			"-shared"
+			"-Wl,--enable-auto-import"
+		)
+		target_link_libraries(${PROJECT_NAME} PRIVATE "C:\\Program Files/Pd/bin/pd.dll"
+		)
         # WIN32 is for Windows 32 and 64 bits. We just use Windows 64 bits.
 		set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".m_amd64")
-        find_library(PD_LIBRARY NAMES pd HINTS ${PD_LIB_PATH})
-		##target_link_libraries(${PROJECT_NAME} ${PD_LIBRARY})
+        
 	endif()
 
 	# Removes some warning for Microsoft Visual C.
