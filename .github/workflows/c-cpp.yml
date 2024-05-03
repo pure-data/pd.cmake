@@ -1,12 +1,53 @@
 name: C/C++ CI
 on:
+  workflow_dispatch:
   push:
     branches: ["master"]
   pull_request:
     branches: ["master"]
+env:
+  LIBNAME: simple
 jobs:
+  linux-arm:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [armv6l, armv7l, aarch64]
+        include:
+          - arch: armv6l
+            cpu: arm1176
+            base_image: raspios_lite:latest
+            cpu_info: raspberrypi_zero_w
+          - arch: armv7l
+            cpu: cortex-a7
+            base_image: raspios_lite:latest
+            cpu_info: raspberrypi_3b
+          - arch: aarch64
+            cpu: cortex-a53
+            base_image: raspios_lite_arm64:latest
+            cpu_info: raspberrypi_zero2_w_arm64_w
+    steps:
+      - uses: pguyot/arm-runner-action@v2
+        with:
+          base_image: ${{ matrix.base_image }}
+          cpu: ${{ matrix.cpu }}
+          cpu_info: ${{ matrix.cpu_info }}
+          commands: |
+            curl -L -o pd.tar.gz https://msp.ucsd.edu/Software/pd-0.54-1.src.tar.gz
+            tar -xzf pd.tar.gz
+            rm pd.tar.gz
+            mv pd-* pure-data
+            sudo apt-get update
+            sudo add-apt-repository ppa:pure-data/pure-data -y
+            sudo apt-get install puredata -y
+            cmake . -B build -DCMAKE_SYSTEM_PROCESSOR=arm
+            cmake --build build -- -j$(nproc)
   macos-universal-build:
     runs-on: macos-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+        precision: [32, 64]
     steps:
       - uses: actions/checkout@v3
         with:
@@ -16,17 +57,20 @@ jobs:
         run: |
           brew install --cask pd
       - name: Build Object
-        run: "cmake . -B build\ncmake --build build -j $(sysctl -n hw.logicalcpu)\n      \n"
-      # - name: Make zip file
-      #   run: |
-      #     mkdir pd-partialtrack
-      #     cp *.d_amd64 pd-partialtrack
+        if: ${{ matrix.arch == 'arm64' }}
+        run: |
+          cmake . -B build -DCMAKE_OSX_ARCHITECTURES=arm64
+          cmake --build build -j $(sysctl -n hw.logicalcpu)
+      - name: Build Object
+        if: ${{ matrix.arch != 'arm64' }}
+        run: |
+          cmake . -B build
+          cmake --build build -j $(sysctl -n hw.logicalcpu)
       - name: Upload Object
         uses: actions/upload-artifact@v3
         with:
-          name: pd-partialtrack
-          path: pd-partialtrack
-          # ──────────────────────────────────────
+          name: ${{ env.LIB_NAME }}-macos-${{matrix.arch}}-${{matrix.precision}}
+          path: PdObj
   windows-build:
     runs-on: windows-latest
     steps:
@@ -40,7 +84,7 @@ jobs:
         with:
           msystem: mingw64
           platform: x64
-          install: make autoconf automake libtool mingw-w64-x86_64-gcc mingw64/mingw-w64-x86_64-cmake
+          install: make mingw-w64-x86_64-gcc mingw64/mingw-w64-x86_64-cmake
           update: false
       - name: Install PureData
         run: |
@@ -48,14 +92,20 @@ jobs:
       - if: runner.os == 'Windows'
         name: Build Object
         shell: msys2 {0}
-        run: "cmake . -B build\ncmake --build build \n"
+        run: |
+          cmake . -B build
+          cmake --build build
       - name: Upload
         uses: actions/upload-artifact@v3
         with:
-          name: pd-partialtrack
-          path: pd-partialtrack
+          name: ${{ env.LIBNAME }}-windows
+          path: PdObj
   linux-build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64]
+        precision: [32, 64]
     steps:
       - uses: actions/checkout@v3
         with:
@@ -77,5 +127,5 @@ jobs:
       - name: Upload Object
         uses: actions/upload-artifact@v3
         with:
-          name: pd-partialtrack
-          path: pd-partialtrack
+          name: ${{ env.LIBNAME }}-linux-${{matrix.arch}}-${{matrix.precision}}
+          path: PdObj

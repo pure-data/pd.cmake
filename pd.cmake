@@ -1,6 +1,6 @@
 set(PD_CMAKE_PATH ${CMAKE_CURRENT_LIST_DIR})
 set(PD_OUTPUT_PATH)
-set (PD_FLOATSIZE 32 CACHE STRING "the floatsize of Pd (32 or 64)")
+set(PD_FLOATSIZE 32 CACHE STRING "the floatsize of Pd (32 or 64)")
 
 #╭──────────────────────────────────────╮
 #│                Macros                │
@@ -18,7 +18,7 @@ endmacro(set_pd_sources)
 #╭──────────────────────────────────────╮
 #│              Functions               │
 #╰──────────────────────────────────────╯
-function(get_pd_lib_path)
+function(set_pd_lib_path)
     if(NOT PD_SOURCES_PATH)
         if (WIN32)
             set(PD_SOURCES_PATH "C:\\Program Files\\Pd\\src")
@@ -53,10 +53,10 @@ function(get_pd_lib_path)
 			endif()
         endif()
 	endif()
-endfunction(get_pd_lib_path)
+endfunction(set_pd_lib_path)
 
 # ──────────────────────────────────────
-function(get_pd_lib_ext)
+function(set_pd_lib_ext)
     if(PD_EXTENSION)
         set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".${PD_EXTENSION}")
     else()
@@ -93,10 +93,14 @@ function(get_pd_lib_ext)
         endif()
         set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ${PD_EXTENSION})
     endif()
-endfunction(get_pd_lib_ext)
+endfunction(set_pd_lib_ext)
 
 # ──────────────────────────────────────
 function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
+    if (NOT PD_OUTPUT_PATH)
+        set(PD_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/PdObj)
+    endif()
+
     set(ALL_SOURCES ${EXTERNAL_SOURCES}) 
     list(APPEND ALL_SOURCES ${ARGN})
     source_group(src FILES ${ALL_SOURCES})
@@ -117,9 +121,14 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
 			set_target_properties(${PROJECT_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${PD_OUTPUT_PATH})
 	endforeach(OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES)
 
-    get_pd_lib_path()
-    get_pd_lib_ext()
+    set_pd_lib_path()
+    set_pd_lib_ext()
+
+    if(PD_FLOATSIZE STREQUAL 64)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE PD_FLOATSIZE=64)
+    endif()
 
     # TODO: Add MSVC support
+
 endfunction(add_pd_external)
 
