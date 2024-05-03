@@ -1,0 +1,4 @@
+#N canvas 6 28 951 1014 10;
+#X obj 73 64 simple;
+#X obj 73 35 nbx 5 16 -1e+37 1e+37 0 0 empty empty empty 0 -9 0 10 #fcfcfc #000000 #000000 0 256;
+#X connect 1 0 0 0;
