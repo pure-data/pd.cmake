@@ -1,0 +1,81 @@
+name: C/C++ CI
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+jobs:
+  macos-universal-build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Install PureData and Deps
+        run: |
+          brew install --cask pd
+      - name: Build Object
+        run: "cmake . -B build\ncmake --build build -j $(sysctl -n hw.logicalcpu)\n      \n"
+      # - name: Make zip file
+      #   run: |
+      #     mkdir pd-partialtrack
+      #     cp *.d_amd64 pd-partialtrack
+      - name: Upload Object
+        uses: actions/upload-artifact@v3
+        with:
+          name: pd-partialtrack
+          path: pd-partialtrack
+          # ──────────────────────────────────────
+  windows-build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - if: runner.os == 'Windows'
+        name: "Install mingw deps"
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: mingw64
+          platform: x64
+          install: make autoconf automake libtool mingw-w64-x86_64-gcc mingw64/mingw-w64-x86_64-cmake
+          update: false
+      - name: Install PureData
+        run: |
+          choco install puredata --yes
+      - if: runner.os == 'Windows'
+        name: Build Object
+        shell: msys2 {0}
+        run: "cmake . -B build\ncmake --build build \n"
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: pd-partialtrack
+          path: pd-partialtrack
+  linux-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: PureData Sources
+        run: |
+          curl -L -o pd.tar.gz https://msp.ucsd.edu/Software/pd-0.54-1.src.tar.gz
+          tar -xzf pd.tar.gz
+          rm pd.tar.gz
+          mv pd-* pure-data
+          sudo apt-get update
+          sudo add-apt-repository ppa:pure-data/pure-data -y
+          sudo apt-get install puredata -y
+      - name: Build Object
+        run: |
+          cmake . -B build
+          cmake --build build -- -j$(nproc)
+      - name: Upload Object
+        uses: actions/upload-artifact@v3
+        with:
+          name: pd-partialtrack
+          path: pd-partialtrack
