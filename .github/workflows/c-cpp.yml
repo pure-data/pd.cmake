@@ -25,12 +25,12 @@ jobs:
       - name: Build Object for Arm
         if: ${{ matrix.arch == 'arm64' }}
         run: |
-          cmake . -B build -DCMAKE_OSX_ARCHITECTURES=arm64
+          cmake . -B build -DCMAKE_OSX_ARCHITECTURES=arm64 -DPD_FLOATSIZE=${{ matrix.precision }}
           cmake --build build -j $(sysctl -n hw.logicalcpu)
       - name: Build Object for Intel
         if: ${{ matrix.arch == 'amd64' }}
         run: |
-          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }}
+          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_OSX_ARCHITECTURES=x86_64
           cmake --build build -j $(sysctl -n hw.logicalcpu)
       - name: Upload Object
         uses: actions/upload-artifact@v4

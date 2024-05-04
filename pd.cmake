@@ -100,11 +100,12 @@ function(set_pd_lib_ext)
         endif()
 
         if(APPLE)
-            if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
+            if (CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
                 set(PD_EXTENSION ".darwin-arm64-${PD_FLOATSIZE}.dylib")
             else()
                 set(PD_EXTENSION ".darwin-amd64-${PD_FLOATSIZE}.dylib")
             endif()
+
         elseif(UNIX)
             if(CMAKE_SIZEOF_VOID_P EQUAL 4) # 32-bit
                 if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
@@ -172,8 +173,5 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
     if(PD_FLOATSIZE STREQUAL 64)
         target_compile_definitions(${PROJECT_NAME} PRIVATE PD_FLOATSIZE=64)
     endif()
-
-    # TODO: Add MSVC support
-
 endfunction(add_pd_external)
 
