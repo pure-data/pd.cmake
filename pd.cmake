@@ -26,22 +26,29 @@ endmacro(set_pd_sources)
 #╰──────────────────────────────────────╯
 function(set_pd_paths)
     if(NOT PD_SOURCES_PATH)
+        # Windows 
         if (WIN32)
-            set(PD_SOURCES_PATH "C:/Program Files/Pd/src")
-            set(PD_LIB_PATH "C:/Program Files/Pd/bin")
+            if (PD_FLOATSIZE EQUAL 64)
+                set(PD_SOURCES_PATH "C:/Program Files/Pd64/src")
+                set(PD_LIB_PATH "C:/Program Files/Pd64/bin")
+            elseif (PD_FLOATSIZE EQUAL 32)
+                set(PD_SOURCES_PATH "C:/Program Files/Pd/src")
+                set(PD_LIB_PATH "C:/Program Files/Pd/bin")
+            endif()
 		    find_library(PD_LIBRARY NAMES pd HINTS ${PD_LIB_PATH})
             find_path(PD_HEADER_PATH m_pd.h PATHS ${PD_SOURCES_PATH})
             if (NOT PD_HEADER_PATH)
                 message(FATAL_ERROR "<m_pd.h> not found in C:\\Program Files\\Pd\\src, is Pd installed?")
             endif()
 
-            # Pd Lib
             find_library(PD_LIBRARY NAMES pd HINTS ${PD_LIB_PATH})
-            if (MSVC)
+            if (PD_FLOATSIZE EQUAL 64)
+                target_link_libraries(${PROJECT_NAME} "${PD_LIB_PATH}/pd64.lib")
+            elseif (PD_FLOATSIZE EQUAL 32)
                 target_link_libraries(${PROJECT_NAME} "${PD_LIB_PATH}/pd.lib")
-            else()
-                target_link_libraries(${PROJECT_NAME} "${PD_LIB_PATH}/pd.dll")
             endif()
+
+        #  macOS
         elseif(APPLE)
             file(GLOB PD_INSTALLER "/Applications/Pd*.app")
             if(PD_INSTALLER)
@@ -51,11 +58,14 @@ function(set_pd_paths)
             else()
                 message(FATAL_ERROR "PD_SOURCES_PATH not set and no Pd.app found in /Applications, is Pd installed?")
             endif()
+
             find_path(PD_HEADER_PATH m_pd.h PATHS ${PD_SOURCES_PATH})
             if (NOT PD_HEADER_PATH)
                 message(FATAL_ERROR "<m_pd.h> not found in /Applications/Pd.app/Contents/Resources/src/, is Pd installed?")
             endif()
             message(STATUS "PD_SOURCES_PATH not set, using ${PD_SOURCES_PATH}")
+
+        # Linux
         elseif (UNIX)
             if(NOT PD_SOURCES_PATH)
                 set(PD_SOURCES_PATH "/usr/include/pd/")
@@ -63,14 +73,20 @@ function(set_pd_paths)
 			if(NOT PD_LIB_PATH)
             	set(PD_LIB_PATH ${PD_SOURCES_PATH}/../bin)
 			endif()
+
             find_path(PD_HEADER_PATH m_pd.h PATHS ${PD_SOURCES_PATH})
             if (NOT PD_HEADER_PATH)
                 message(FATAL_ERROR "<m_pd.h> not found in /usr/include/pd/, is Pd installed?")
             endif()
+
+        # Unknown
         else()
             message(FATAL_ERROR "PD_SOURCES_PATH not set and no default path for the system")
         endif()
+
+        # Set the paths
         set(PD_SOURCES_PATH ${PD_SOURCES_PATH} PARENT_SCOPE)
+
 	endif()
 endfunction(set_pd_paths)
 
@@ -127,10 +143,6 @@ endfunction(set_compiler_flags)
 
 # ──────────────────────────────────────
 function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
-    if (NOT PD_OUTPUT_PATH)
-        set(PD_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/PdObj)
-    endif()
-
     set(ALL_SOURCES ${EXTERNAL_SOURCES}) 
     list(APPEND ALL_SOURCES ${ARGN})
     source_group(src FILES ${ALL_SOURCES})
@@ -141,12 +153,12 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
   
 	target_include_directories(${PROJECT_NAME} PRIVATE ${PD_SOURCES_PATH})
 	set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${EXTERNAL_NAME})
-	set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${EXTERNAL_NAME})
 
 	# Defines the output path of the external.
   	set_target_properties(${PROJECT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PD_OUTPUT_PATH})
 	set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PD_OUTPUT_PATH})
 	set_target_properties(${PROJECT_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${PD_OUTPUT_PATH})
+
 	foreach(OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES})
 		    string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
 			set_target_properties(${PROJECT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${PD_OUTPUT_PATH})
