@@ -26,16 +26,10 @@ The configuration of the CMakeList with pd.cmake is pretty straight forward but 
 cmake_minimum_required(VERSION 3.15)
 
 # Include pd.cmake (1):
-include(${CMAKE_CURRENT_SOURCE_DIR}/pd.build/pd.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/pd.cmake/pd.cmake)
 
 # Declare the name of the project:
 project(my_objects)
-
-# Set the output path for the externals (3):
-set_pd_external_path(${CMAKE_CURRENT_SOURCE_DIR}/Bin/)
-
-# Compiling for Pd double precision (4)(optional)
-set(PD_FLOATSIZE64 "OFF")
 
 # Add one or several externals (5):
 add_pd_external(myobj1 obj_name1 ${CMAKE_CURRENT_SOURCE_DIR}/Sources/obj1.c)
@@ -46,7 +40,7 @@ add_pd_external(myobj2 obj_name2 ${CMAKE_CURRENT_SOURCE_DIR}/Sources/obj2.cpp)
 Further information:
 
 1. The path _pd.cmake_ depends on where you installed _pd.cmake, here we assume that \_pd.cmake_ is localized at the root directory of you project.
-2. Here the externals are installed in the _binaries_ subfolder, but you can use the function to use the folder of your choice.
+2. Here the externals are installed in the _Binaries_ folder, you can change it using `set_pd_external_path(PATH)`.
 3. As of Pd 0.51-0 you can compile a ["Double precision" Pd](http://msp.ucsd.edu/Pd_documentation/x6.htm#s6.6). If you intend to use your externals in such an environment, you must also compile them with double precision by adding this line `.
 4. The function adds a new subproject to the main project. This subproject matches to a new external allowing to compile only one object without compiling all the others. The first argument is the name of the subproject, the second argument is the name of the external and the third argument are the sources. If you use more than one file, you can use `GLOB`, in this case, we compile all `.cpp` files inside `Sources`.
 
@@ -69,9 +63,46 @@ cmake --build build
 
 ## Github Actions
 
-## Examples
+`pd.cmake` offers an example for easily integrating GitHub Actions into your workflow, it facilitates the compilation process for your PureData Library without the need for external resources or borrowing machines (for example).
+
+<details><summary>How to use for your Library</summary>
+
+1. Create Necessary Folders:
+    * Navigate to your Library Folder.
+    * Create a new folder named `.github`.
+    * Within `.github`, create another folder named `workflows`.
+
+2. Download Example File:
+    * Download the provided example file from this link [here](https://raw.githubusercontent.com/pure-data/pd.cmake/main/.github/workflows/c-cpp.yml).
+    * Paste the downloaded file into the workflows folder you just created.
+3. Modify Variables:
+    * Open the downloaded file.
+    * Find the variable `LIBNAME` on line 09.
+    * Replace `simple` with the name of your library.
+4. Commit and Upload:
+    * Commit the changes to your repository on GitHub.
+5. Run Workflow:
+    * Go to the Actions tab on your GitHub repository page.
+    * Look for an action called `C/C++ CI` (if you don't changed the name).
+    * Click on it, then click Run workflow.
+    * Wait for the workflow to complete.
+6. Download Result:
+    * After the workflow has finished running, refresh the page.
+    * Look for a new item, usually titled with the last commit message.
+    * If you see a blue checkbox, click on it.
+    * Scroll down and locate a file named `yourlibname-ALL-binaries`.
+    * Download this file.
+
+If the workflow fails (you see a red `x` instead of a checkbox), you'll need to debug. You can seek help in the issues section of the `pd.cmake` repository.
+
+#### About Dynamic Libraries
+
+If you use `fftw3` in your object or anything else, you will need to install it. There is indications in the `c-cpp.yml` where you add this, for Windows, prefer `mingw64` build for now.
+
+</details>
+
 
 ## See Also
 
 - [pd-lib-builder](https://github.com/pure-data/pd-lib-builder)
-- [deken](https://github.com/pure-data/deken)
+
