@@ -22,6 +22,7 @@ jobs:
       - name: Install PureData and Deps
         run: |
           brew install --cask pd
+          # add here another libraries, as fftw3, search the command using https://brew.sh/
       - name: Build Object for Arm
         if: ${{ matrix.arch == 'arm64' }}
         run: |
@@ -57,7 +58,8 @@ jobs:
         uses: msys2/setup-msys2@v2
         with:
           msystem: mingw64
-          install: make mingw-w64-x86_64-gcc mingw64/mingw-w64-x86_64-cmake # put here things like fftw3, gsl, etc
+          install: make mingw-w64-x86_64-gcc mingw64/mingw-w64-x86_64-cmake
+          # put in install dynamic libraries like fftw3. Search for the name in https://packages.msys2.org/queue
           update: false
       # ──────────────────────────────────────
       - name: Install winget
@@ -95,6 +97,7 @@ jobs:
           sudo apt update
           sudo add-apt-repository ppa:pure-data/pure-data -y
           sudo apt install puredata -y
+          # add here things as fftw3, you can search in https://packages.ubuntu.com/search (always use -dev) packages
       - name: Install aarch64 gcc
         if: matrix.arch == 'aarch64'
         run: |
