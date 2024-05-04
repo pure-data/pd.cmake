@@ -1,5 +1,5 @@
 set(PD_CMAKE_PATH ${CMAKE_CURRENT_LIST_DIR})
-set(PD_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/PdObj CACHE PATH "Path to the output of the external")
+set(PD_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Binaries CACHE PATH "Path to the output of the external")
 set(PD_FLOATSIZE 32 CACHE STRING "the floatsize of Pd (32 or 64)")
 set(PD_SOURCES_PATH "" CACHE PATH "Path to Pd sources")
 
