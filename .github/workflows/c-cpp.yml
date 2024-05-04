@@ -2,46 +2,12 @@ name: C/C++ CI
 on:
   workflow_dispatch:
   push:
-    branches: ["master"]
+    branches: ["main"]
   pull_request:
-    branches: ["master"]
+    branches: ["main"]
 env:
   LIBNAME: simple
 jobs:
-  linux-arm:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [armv6l, armv7l, aarch64]
-        include:
-          - arch: armv6l
-            cpu: arm1176
-            base_image: raspios_lite:latest
-            cpu_info: raspberrypi_zero_w
-          - arch: armv7l
-            cpu: cortex-a7
-            base_image: raspios_lite:latest
-            cpu_info: raspberrypi_3b
-          - arch: aarch64
-            cpu: cortex-a53
-            base_image: raspios_lite_arm64:latest
-            cpu_info: raspberrypi_zero2_w_arm64_w
-    steps:
-      - uses: pguyot/arm-runner-action@v2
-        with:
-          base_image: ${{ matrix.base_image }}
-          cpu: ${{ matrix.cpu }}
-          cpu_info: ${{ matrix.cpu_info }}
-          commands: |
-            curl -L -o pd.tar.gz https://msp.ucsd.edu/Software/pd-0.54-1.src.tar.gz
-            tar -xzf pd.tar.gz
-            rm pd.tar.gz
-            mv pd-* pure-data
-            sudo apt-get update
-            sudo add-apt-repository ppa:pure-data/pure-data -y
-            sudo apt-get install puredata -y
-            cmake . -B build -DCMAKE_SYSTEM_PROCESSOR=arm
-            cmake --build build -- -j$(nproc)
   macos-universal-build:
     runs-on: macos-latest
     strategy:
@@ -69,9 +35,27 @@ jobs:
       - name: Upload Object
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.LIB_NAME }}-macos-${{matrix.arch}}-${{matrix.precision}}
+          name: ${{env.LIBNAME}}-macos-${{matrix.arch}}-${{matrix.precision}}
           path: PdObj
-  windows-build:
+  windows-msbuild:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Set up Visual Studio Build Tools
+        uses: microsoft/setup-msbuild@v1
+      - name: Install winget
+        uses: Cyberboss/install-winget@v1
+      - name: Install PureData
+        run: |
+          winget install -e --id MillerPuckette.PureData --accept-source-agreements
+      - name: Configure and build
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+          cmake --build . --config Release
+  windows-mingw:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v3
@@ -86,9 +70,11 @@ jobs:
           platform: x64
           install: make mingw-w64-x86_64-gcc mingw64/mingw-w64-x86_64-cmake
           update: false
+      - name: Install winget
+        uses: Cyberboss/install-winget@v1
       - name: Install PureData
         run: |
-          choco install puredata --yes
+          winget install -e --id MillerPuckette.PureData --accept-source-agreements
       - if: runner.os == 'Windows'
         name: Build Object
         shell: msys2 {0}
@@ -98,13 +84,13 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.LIBNAME }}-windows
+          name: ${{env.LIBNAME}}-windows
           path: PdObj
   linux-build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        arch: [amd64]
+        arch: [amd64, aarch64, arm]
         precision: [32, 64]
     steps:
       - uses: actions/checkout@v3
@@ -117,12 +103,33 @@ jobs:
           tar -xzf pd.tar.gz
           rm pd.tar.gz
           mv pd-* pure-data
-          sudo apt-get update
+          sudo apt update
           sudo add-apt-repository ppa:pure-data/pure-data -y
-          sudo apt-get install puredata -y
+          sudo apt install puredata -y
+      - name: Install aarch64 gcc
+        if: matrix.arch == 'aarch64'
+        run: |
+          sudo apt install gcc-aarch64-linux-gnu -y
+          sudo apt install g++-aarch64-linux-gnu -y
+      - name: Install arm gcc
+        if: matrix.arch == 'arm'
+        run: |
+          sudo apt install gcc-arm-linux-gnueabihf -y
+          sudo apt install g++-arm-linux-gnueabihf -y
       - name: Build Object
+        if: matrix.arch == 'amd64'
         run: |
           cmake . -B build
+          cmake --build build -- -j$(nproc)
+      - name: Build Object
+        if: matrix.arch == 'aarch64'
+        run: |
+          cmake . -B build -DCMAKE_TOOLCHAIN_FILE=./Toolchains/LinuxARM64.cmake
+          cmake --build build -- -j$(nproc)
+      - name: Build Object
+        if: matrix.arch == 'arm'
+        run: |
+          cmake . -B build -DCMAKE_TOOLCHAIN_FILE=./Toolchains/LinuxARM32.cmake
           cmake --build build -- -j$(nproc)
       - name: Upload Object
         uses: actions/upload-artifact@v3

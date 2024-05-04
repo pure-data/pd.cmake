@@ -1,3 +1,4 @@
-Examples/build
-Examples/simple/simple.l_amd64
-Examples/simple~/simple~.l_amd64
+build
+*.l_amd64
+*.so
+build
