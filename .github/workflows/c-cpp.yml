@@ -7,6 +7,7 @@ on:
     branches: ["main"]
 env:
   LIBNAME: simple
+  LIBVERSION: 0.1
 jobs:
   macos-universal-build:
     runs-on: macos-latest
@@ -144,8 +145,22 @@ jobs:
           merge-multiple: true
       - name: Clear tmp files
         run: rm -f artifacts/*.pdb
-      - name: Upload artifacts zip
+        # ──────────────────────────────────────
+      - name: Install Deken
+        continue-on-error: true
+        run: |
+          mkdir -p ${PWD}/package
+          docker run --rm --user $(id -u) \
+          --volume ${PWD}/artifacts:/artifacts \
+          --volume ${PWD}/package:/package \
+          registry.git.iem.at/pd/deken \
+          deken package /artifacts --output-dir /package -v ${{env.LIBVERSION}} -n ${{env.LIBNAME}}
+      - name: Clear Artifacts
+        uses: geekyeggo/delete-artifact@v5
+        with:
+          name: ${{ env.LIBNAME }}-*
+      - name: Upload Deken
         uses: actions/upload-artifact@v4
         with:
-          name: ${{env.LIBNAME}}-ALL-binaries
-          path: artifacts
+          name: ${{ env.LIBNAME }}-${{env.LIBVERSION}}
+          path: "./package/"
