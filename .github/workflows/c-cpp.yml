@@ -97,7 +97,6 @@ jobs:
           sudo apt update
           sudo add-apt-repository ppa:pure-data/pure-data -y
           sudo apt install puredata -y
-          # add here things as fftw3, you can search in https://packages.ubuntu.com/search (always use -dev) packages
       - name: Install aarch64 gcc
         if: matrix.arch == 'aarch64'
         run: |
@@ -116,12 +115,12 @@ jobs:
       - name: Build Object
         if: matrix.arch == 'aarch64'
         run: |
-          cmake . -B build -DCMAKE_TOOLCHAIN_FILE=./Toolchains/LinuxARM64.cmake -DPD_FLOATSIZE=${{ matrix.precision }}
+          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_PROCESSOR=aarch64
           cmake --build build -- -j$(nproc)
       - name: Build Object
         if: matrix.arch == 'arm'
         run: |
-          cmake . -B build -DCMAKE_TOOLCHAIN_FILE=./Toolchains/LinuxARM32.cmake -DPD_FLOATSIZE=${{ matrix.precision }}
+          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_PROCESSOR=arm
           cmake --build build -- -j$(nproc)
       - name: Upload Object
         uses: actions/upload-artifact@v4
