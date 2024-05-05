@@ -101,9 +101,9 @@ function(set_pd_lib_ext)
 
         if(APPLE)
             if (CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
-                set(PD_EXTENSION ".darwin-arm64-${PD_FLOATSIZE}.dylib")
+                set(PD_EXTENSION ".darwin-arm64-${PD_FLOATSIZE}.so")
             else()
-                set(PD_EXTENSION ".darwin-amd64-${PD_FLOATSIZE}.dylib")
+                set(PD_EXTENSION ".darwin-amd64-${PD_FLOATSIZE}.so")
             endif()
 
         elseif(UNIX)
