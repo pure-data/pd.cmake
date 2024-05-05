@@ -3,9 +3,33 @@ set(PD_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/Binaries CACHE PATH "Path to the 
 set(PD_FLOATSIZE 32 CACHE STRING "the floatsize of Pd (32 or 64)")
 set(PD_SOURCES_PATH "" CACHE PATH "Path to Pd sources")
 
-if(CMAKE_TOOLCHAIN_FILE)
-    message(STATUS "Using toolchain file: ${CMAKE_TOOLCHAIN_FILE}")
-    include(${CMAKE_TOOLCHAIN_FILE})
+#╭──────────────────────────────────────╮
+#│   ToolChain for Raspberry (others)   │
+#│               and ARM                │
+#╰──────────────────────────────────────╯
+
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+    set(CMAKE_SYSTEM_NAME Linux)
+    set(CMAKE_SYSTEM_PROCESSOR aarch64)
+    find_program(AARCH64_GCC NAMES aarch64-linux-gnu-gcc)
+    find_program(AARCH64_GXX NAMES aarch64-linux-gnu-g++)
+    if(AARCH64_GCC AND AARCH64_GXX)
+        set(CMAKE_C_COMPILER ${AARCH64_GCC})
+        set(CMAKE_CXX_COMPILER ${AARCH64_GXX})
+    else()
+        message(FATAL_ERROR "Cross-compilers for aarch64 architecture not found.")
+    endif()
+elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
+    set(CMAKE_SYSTEM_NAME Linux)
+    set(CMAKE_SYSTEM_PROCESSOR arm)
+    find_program(ARM_GCC NAMES arm-linux-gnueabihf-gcc)
+    find_program(ARM_GXX NAMES arm-linux-gnueabihf-g++)
+    if(ARM_GCC AND ARM_GXX)
+        set(CMAKE_C_COMPILER ${ARM_GCC})
+        set(CMAKE_CXX_COMPILER ${ARM_GXX})
+    else()
+        message(FATAL_ERROR "ERROR: Cross-compilers for ARM architecture not found.")
+    endif()
 endif()
 
 #╭──────────────────────────────────────╮
@@ -101,9 +125,9 @@ function(set_pd_lib_ext)
 
         if(APPLE)
             if (CMAKE_OSX_ARCHITECTURES MATCHES "arm64")
-                set(PD_EXTENSION ".darwin-arm64-${PD_FLOATSIZE}.dylib")
+                set(PD_EXTENSION ".darwin-arm64-${PD_FLOATSIZE}.so")
             else()
-                set(PD_EXTENSION ".darwin-amd64-${PD_FLOATSIZE}.dylib")
+                set(PD_EXTENSION ".darwin-amd64-${PD_FLOATSIZE}.so")
             endif()
 
         elseif(UNIX)

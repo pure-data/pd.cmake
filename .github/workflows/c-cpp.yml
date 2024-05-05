@@ -22,7 +22,8 @@ jobs:
       - name: Install PureData and Deps
         run: |
           brew install --cask pd
-          # add here another libraries, as fftw3, search the command using https://brew.sh/
+          # Add here dynamic libraries that you use (ex. fftw3, gsl, ...).
+          # Search for the name in https://brew.sh/
       - name: Build Object for Arm
         if: ${{ matrix.arch == 'arm64' }}
         run: |
@@ -42,7 +43,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        compiler: [mingw, msvc] # CHANGE: Choose between a compiler
+        compiler: [mingw, msvc] # CHANGE: Choose between a compiler, you don't need boths
         arch: [amd64]
         precision: [32, 64]
     steps:
@@ -52,6 +53,7 @@ jobs:
       - if: matrix.compiler == 'msvc'
         name: Set up Visual Studio Build Tools
         uses: microsoft/setup-msbuild@v2
+        # TODO: Add vcpkg support
       # ──────────────────────────────────────
       - if: matrix.compiler == 'mingw'
         name: Set up Msys2
@@ -59,7 +61,8 @@ jobs:
         with:
           msystem: mingw64
           install: make mingw-w64-x86_64-gcc mingw64/mingw-w64-x86_64-cmake
-          # put in install dynamic libraries like fftw3. Search for the name in https://packages.msys2.org/queue
+          # Add here dynamic libraries that you use (ex. fftw3, gsl, ...). 
+          # Search for the name in https://packages.msys2.org/queue
           update: false
       # ──────────────────────────────────────
       - name: Install winget
@@ -97,7 +100,8 @@ jobs:
           sudo apt update
           sudo add-apt-repository ppa:pure-data/pure-data -y
           sudo apt install puredata -y
-          # add here things as fftw3, you can search in https://packages.ubuntu.com/search (always use -dev) packages
+          # Add here dynamic libraries that you use (ex. fftw3, gsl, ...).
+          # search for the name in https://packages.ubuntu.com/search
       - name: Install aarch64 gcc
         if: matrix.arch == 'aarch64'
         run: |
@@ -116,12 +120,12 @@ jobs:
       - name: Build Object
         if: matrix.arch == 'aarch64'
         run: |
-          cmake . -B build -DCMAKE_TOOLCHAIN_FILE=./Toolchains/LinuxARM64.cmake -DPD_FLOATSIZE=${{ matrix.precision }}
+          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_PROCESSOR=aarch64
           cmake --build build -- -j$(nproc)
       - name: Build Object
         if: matrix.arch == 'arm'
         run: |
-          cmake . -B build -DCMAKE_TOOLCHAIN_FILE=./Toolchains/LinuxARM32.cmake -DPD_FLOATSIZE=${{ matrix.precision }}
+          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_PROCESSOR=arm
           cmake --build build -- -j$(nproc)
       - name: Upload Object
         uses: actions/upload-artifact@v4
