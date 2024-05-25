@@ -24,7 +24,7 @@ endif()
 #│               and ARM                │
 #╰──────────────────────────────────────╯
 
-if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64" AND CMAKE_SYSTEM_NAME MATCHES "Linux")
     set(CMAKE_SYSTEM_NAME Linux)
     set(CMAKE_SYSTEM_PROCESSOR aarch64)
     find_program(AARCH64_GCC NAMES aarch64-linux-gnu-gcc)
@@ -35,7 +35,7 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
     else()
         message(FATAL_ERROR "Cross-compilers for aarch64 architecture not found.")
     endif()
-elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
+elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "arm" AND CMAKE_SYSTEM_NAME MATCHES "Linux")
     set(CMAKE_SYSTEM_NAME Linux)
     set(CMAKE_SYSTEM_PROCESSOR arm)
     find_program(ARM_GCC NAMES arm-linux-gnueabihf-gcc)
