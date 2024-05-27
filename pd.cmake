@@ -19,6 +19,10 @@ else()
     message(FATAL_ERROR "Platform not supported")
 endif()
 
+if (PD_INSTALL_LIBS)
+    message(STATUS "Pd Install Libs Path: ${PDLIBDIR}")
+endif()
+
 #╭──────────────────────────────────────╮
 #│   ToolChain for Raspberry (others)   │
 #│               and ARM                │
