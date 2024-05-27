@@ -7,5 +7,11 @@ include(${PDCMAKE_DIR}/pd.cmake)
 project(mysimplelib)
 add_pd_external(simple ${CMAKE_SOURCE_DIR}/Examples/simple/simple.cpp)
 
+file(GLOB HELP_PATCHES "${CMAKE_SOURCE_DIR}/Examples/simple/*.pd")
+add_datafile(simple ${HELP_PATCHES})
+
+
 # Simple Obj 2
 add_pd_external(simple~ ${CMAKE_SOURCE_DIR}/Examples/simple~/simple~.cpp)
+add_datafile(simple~ "${CMAKE_SOURCE_DIR}/Examples/simple~/simple~-help.pd")
+
