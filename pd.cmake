@@ -54,7 +54,7 @@ endif()
 
 if(NOT PD_SOURCES_PATH)
     # Windows 
-    if (WIN32)
+    if (WIN32 OR MINGW)
         if (PD_FLOATSIZE EQUAL 64)
             set(PD_SOURCES_PATH "C:/Program Files/Pd64/src")
             if (NOT PDBINDIR)
@@ -71,8 +71,6 @@ if(NOT PD_SOURCES_PATH)
         if (NOT PD_HEADER_PATH)
             message(FATAL_ERROR "<m_pd.h> not found in C:\\Program Files\\Pd\\src, is Pd installed?")
         endif()
-
-        find_library(PD_LIBRARY NAMES pd HINTS ${PDBINDIR})
 
     #  macOS
     elseif(APPLE)
@@ -92,14 +90,13 @@ if(NOT PD_SOURCES_PATH)
         message(STATUS "PD_SOURCES_PATH not set, using ${PD_SOURCES_PATH}")
 
     # Linux
-    elseif (UNIX)
+    elseif (UNIX AND NOT APPLE)
         if(NOT PD_SOURCES_PATH)
             set(PD_SOURCES_PATH "/usr/include/pd/")
         endif()
         if(NOT PDBINDIR)
             set(PDBINDIR ${PD_SOURCES_PATH}/../bin)
         endif()
-
         find_path(PD_HEADER_PATH m_pd.h PATHS ${PD_SOURCES_PATH})
         if (NOT PD_HEADER_PATH)
             message(FATAL_ERROR "<m_pd.h> not found in /usr/include/pd/, is Pd installed?")
