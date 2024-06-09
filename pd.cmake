@@ -269,4 +269,28 @@ function(add_pd_external EXTERNAL_NAME EXTERNAL_SOURCES)
     )
 endfunction(add_pd_external)
 
+# ──────────────────────────────────────
+function(external_link_libraries EXTERNAL_NAME LIBRARIES)
+    # check if thereis ~ in OBJ_NAME, if yes, replace it with _tilde
+    if(${EXTERNAL_NAME} MATCHES "~$")
+        string(REGEX REPLACE "~$" "_tilde" OBJ_PROJECT_NAME ${EXTERNAL_NAME})
+    else()
+        set(OBJ_PROJECT_NAME ${EXTERNAL_NAME})
+    endif()
+    set(ALL_LIBRARIES ${LIBRARIES}) 
+    list(APPEND ALL_LIBRARIES ${ARGN})
+    target_link_libraries(${OBJ_PROJECT_NAME} PRIVATE ${ALL_LIBRARIES})
+endfunction(external_link_libraries)
 
+# ──────────────────────────────────────
+function(external_include_directories EXTERNAL_NAME FOLDERS)
+    # check if thereis ~ in OBJ_NAME, if yes, replace it with _tilde
+    if(${EXTERNAL_NAME} MATCHES "~$")
+        string(REGEX REPLACE "~$" "_tilde" OBJ_PROJECT_NAME ${EXTERNAL_NAME})
+    else()
+        set(OBJ_PROJECT_NAME ${EXTERNAL_NAME})
+    endif()
+    set(ALL_FOLDERS ${FOLDERS}) 
+    list(APPEND ALL_FOLDERS ${ARGN})
+    target_include_directories(${OBJ_PROJECT_NAME} PRIVATE ${ALL_FOLDERS})
+endfunction(external_include_directories)
