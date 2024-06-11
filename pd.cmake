@@ -215,29 +215,67 @@ function(pd_set_lib_ext PROJECT_NAME)
 endfunction(pd_set_lib_ext)
 
 # ──────────────────────────────────────
-function(set_compiler_flags OBJ_PROJECT_NAME)
+function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
+    set(target TARGET RENAME)
+
+    set(cxx_flags CXX_FLAGS CONFIGURATIONS)
+    set(c_flags C_FLAGS CONFIGURATIONS)
+    cmake_parse_arguments(PD_EXTERNAL "" "${target}" "${cxx_flags};${c_flags}" ${ARGN})
+
+    # Warning case external name contains ~ and TARGET IS NOT DEFINED
+    if(${PD_EXTERNAL_NAME} MATCHES "~$" AND "${PD_EXTERNAL_TARGET}" STREQUAL "")
+        string(REGEX REPLACE "~$" "_tilde" PROJECT_NAME ${PD_EXTERNAL_NAME})
+        message(WARNING "TARGET for the external ${PD_EXTERNAL_NAME} contains \"~\", replacing with _tilde. Use TARGET keyword in pd_add_external to define a custom target name.\n")
+    elseif(NOT ${PD_EXTERNAL_TARGET} STREQUAL "")
+            set(PROJECT_NAME ${PD_EXTERNAL_TARGET})
+    else()
+        set(PROJECT_NAME ${PD_EXTERNAL_NAME})
+    endif()
+
+    if (EMSCRIPTEN)
+        add_library(${PROJECT_NAME} STATIC ${EXTERNAL_SOURCES})
+    else()
+        add_library(${PROJECT_NAME} SHARED ${EXTERNAL_SOURCES})
+    endif()
+
+    # Configuration of the compilation
+    set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "") # remove lib prefix
+    target_include_directories(${PROJECT_NAME} PRIVATE ${PD_SOURCES_PATH}) # Add Pd Includes
+    set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${PD_EXTERNAL_NAME}) # External Name output
+
     if (WIN32)
         if (PD_FLOATSIZE EQUAL 64)
-            target_link_libraries(${OBJ_PROJECT_NAME} PUBLIC "${PDBINDIR}/pd64.lib")
+            target_link_libraries(${PROJECT_NAME} PRIVATE "${PDBINDIR}/pd64.lib")
         elseif (PD_FLOATSIZE EQUAL 32)
-            target_link_libraries(${OBJ_PROJECT_NAME} PUBLIC "${PDBINDIR}/pd.lib")
+            target_link_libraries(${PROJECT_NAME} PRIVATE "${PDBINDIR}/pd.lib")
         endif()
     elseif (APPLE)
-        set_target_properties(${OBJ_PROJECT_NAME} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
-    endif()
-endfunction(set_compiler_flags)
-
-# ──────────────────────────────────────
-function(add_pd_external EXTERNAL_NAME EXTERNAL_SOURCES)
-    # check if thereis ~ in OBJ_NAME, if yes, replace it with _tilde
-    if(${EXTERNAL_NAME} MATCHES "~$")
-        string(REGEX REPLACE "~$" "_tilde" OBJ_PROJECT_NAME ${EXTERNAL_NAME})
-    else()
-        set(OBJ_PROJECT_NAME ${EXTERNAL_NAME})
+        set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
     endif()
 
-    # print a new line
+    if (WIN32)
+        if (PD_FLOATSIZE EQUAL 64)
+            target_link_libraries(${PROJECT_NAME} PRIVATE "${PDBINDIR}/pd64.lib")
+        elseif (PD_FLOATSIZE EQUAL 32)
+            target_link_libraries(${PROJECT_NAME} PRIVATE "${PDBINDIR}/pd.lib")
+        endif()
+    elseif (APPLE)
+        set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
+    endif()
 
+    get_property(PD_EXTENSION TARGET ${PROJECT_NAME} PROPERTY SUFFIX)
+
+    if(PD_FLOATSIZE STREQUAL 64)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE PD_FLOATSIZE=64)
+    endif()
+
+    pd_set_lib_ext(${PROJECT_NAME})
+    pd_add_datafile(${PROJECT_NAME} ${CMAKE_BINARY_DIR}/${EXTERNAL_NAME}${PD_EXTENSION})
+    cmake_language(EVAL CODE
+        "cmake_language(DEFER CALL pd_install_libs [[${PROJECT_NAME}]])"
+    )
+
+endfunction(pd_add_external)
     set(ALL_SOURCES ${EXTERNAL_SOURCES}) 
     list(APPEND ALL_SOURCES ${ARGN})
     source_group(src FILES ${ALL_SOURCES})
