@@ -136,7 +136,7 @@ endmacro(pd_set_sources)
 #╭──────────────────────────────────────╮
 #│              Functions               │
 #╰──────────────────────────────────────╯
-function(install_libs OBJ_NAME)
+function(pd_install_libs OBJ_NAME)
     if (PD_INSTALL_LIBS)
         if(NOT EXISTS ${PDLIBDIR})
             file(MAKE_DIRECTORY ${PDLIBDIR})
@@ -154,7 +154,7 @@ function(install_libs OBJ_NAME)
                 )
             endforeach()
     endif()
-endfunction(install_libs)
+endfunction(pd_install_libs)
 
 # ──────────────────────────────────────
 function (add_datafile OBJ_NAME DATA_FILE)
