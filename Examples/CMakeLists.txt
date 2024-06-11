@@ -12,6 +12,6 @@ pd_add_external(simple ${CMAKE_SOURCE_DIR}/simple/simple.cpp CXX_FLAGS -std=c++1
 pd_add_datafile(simple "${CMAKE_SOURCE_DIR}/simple/simple-help.pd")
 
 # Obj 2
-# pd_add_external(simple~ ${CMAKE_SOURCE_DIR}/simple~/simple~.cpp 
-#         TARGET simple_tilde)
-# pd_add_datafile(simple_tilde "${CMAKE_SOURCE_DIR}/simple~/simple~-help.pd")
+pd_add_external(simple~ ${CMAKE_SOURCE_DIR}/simple~/simple~.cpp 
+        TARGET simple_tilde)
+pd_add_datafile(simple_tilde "${CMAKE_SOURCE_DIR}/simple~/simple~-help.pd")
