@@ -2,16 +2,16 @@
 cmake_minimum_required(VERSION 3.15)
 set(PDCMAKE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../ CACHE PATH "Path to pd.cmake")
 include(${PDCMAKE_DIR}/pd.cmake)
-
-# Simple Obj 1
 project(mysimplelib)
-add_pd_external(simple ${CMAKE_SOURCE_DIR}/simple/simple.cpp)
 
-file(GLOB HELP_PATCHES "${CMAKE_SOURCE_DIR}/simple/*.pd")
-add_datafile(simple ${HELP_PATCHES})
+# Obj 0 - Just a simple object
+# add_pd_external(simple simple ${CMAKE_SOURCE_DIR}/simple/simple.cpp) 
 
+# Obj 1
+pd_add_external(simple ${CMAKE_SOURCE_DIR}/simple/simple.cpp CXX_FLAGS -std=c++11 -Wall C_FLAGS -Wall)
+pd_add_datafile(simple "${CMAKE_SOURCE_DIR}/simple/simple-help.pd")
 
-# Simple Obj 2
-add_pd_external(simple~ ${CMAKE_SOURCE_DIR}/simple~/simple~.cpp)
-add_datafile(simple~ "${CMAKE_SOURCE_DIR}/simple~/simple~-help.pd")
-
+# Obj 2
+# pd_add_external(simple~ ${CMAKE_SOURCE_DIR}/simple~/simple~.cpp 
+#         TARGET simple_tilde)
+# pd_add_datafile(simple_tilde "${CMAKE_SOURCE_DIR}/simple~/simple~-help.pd")
