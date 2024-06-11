@@ -157,21 +157,20 @@ function(pd_install_libs OBJ_NAME)
 endfunction(pd_install_libs)
 
 # ──────────────────────────────────────
-function (add_datafile OBJ_NAME DATA_FILE)
-    if(${OBJ_NAME} MATCHES "~$")
-        string(REGEX REPLACE "~$" "_tilde" OBJ_PROJECT_NAME ${OBJ_NAME})
-    else()
-        set(OBJ_PROJECT_NAME ${OBJ_NAME})
+function (pd_add_datafile PROJECT_NAME DATA_FILE)
+    if(${PROJECT_NAME} MATCHES "~$")
+        string(REGEX REPLACE "~$" "_tilde" PROJECT_NAME ${PROJECT_NAME})
     endif()
     set(DATA_FILE ${DATA_FILE}) 
     list(APPEND DATA_FILE ${ARGN}) # case use list for multiple files
-    get_property(LOCAL_DATA_FILES TARGET ${OBJ_PROJECT_NAME} PROPERTY EXTERNAL_DATA_FILES)
+
+    get_property(LOCAL_DATA_FILES TARGET ${PROJECT_NAME} PROPERTY EXTERNAL_DATA_FILES)
     foreach(FILE IN LISTS DATA_FILE)
         list(APPEND LOCAL_DATA_FILES ${FILE})
     endforeach()
-    set_property(TARGET ${OBJ_PROJECT_NAME} PROPERTY EXTERNAL_DATA_FILES ${LOCAL_DATA_FILES})
-    get_property(LOCAL_DATA_FILES TARGET ${OBJ_PROJECT_NAME} PROPERTY EXTERNAL_DATA_FILES)
-endfunction(add_datafile)
+    set_property(TARGET ${PROJECT_NAME} PROPERTY EXTERNAL_DATA_FILES ${LOCAL_DATA_FILES})
+    get_property(LOCAL_DATA_FILES TARGET ${PROJECT_NAME} PROPERTY EXTERNAL_DATA_FILES)
+endfunction(pd_add_datafile)
 
 # ──────────────────────────────────────
 function(set_pd_lib_ext OBJ_PROJECT_NAME)
