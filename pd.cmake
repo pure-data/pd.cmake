@@ -218,11 +218,10 @@ endfunction(pd_set_lib_ext)
 
 # ──────────────────────────────────────
 function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
-    set(target TARGET RENAME)
-
-    set(cxx_flags CXX_FLAGS CONFIGURATIONS)
-    set(c_flags C_FLAGS CONFIGURATIONS)
-    cmake_parse_arguments(PD_EXTERNAL "" "${target}" "${cxx_flags};${c_flags}" ${ARGN})
+    set(BOOLEAN_ARGS )
+    set(ONE_ARGS TARGET)
+    set(MULTI_ARGS CXX_FLAGS C_FLAGS) 
+    cmake_parse_arguments(PD_EXTERNAL "${BOOLEAN_ARGS}" "${ONE_ARGS}" "${MULTI_ARGS}" ${ARGN})
 
     # Warning case external name contains ~ and TARGET IS NOT DEFINED
     if(${PD_EXTERNAL_NAME} MATCHES "~$" AND "${PD_EXTERNAL_TARGET}" STREQUAL "")
