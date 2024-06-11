@@ -1,4 +1,3 @@
-# check if cmake version is higher than 3.19
 # check if cmake version is higher than 3.19, we need cmake_language
 if(${CMAKE_VERSION} VERSION_LESS "3.19")
     message(FATAL_ERROR "CMake version must be at least 3.19")
@@ -124,6 +123,7 @@ endmacro(set_pd_external_path)
 macro(pd_set_external_path EXTERNAL_PATH)
 	set(PD_OUTPUT_PATH ${EXTERNAL_PATH})
 endmacro(pd_set_external_path)
+
 # ──────────────────────────────────────
 # The macro sets the location of Pure Data sources.
 macro(set_pd_sources PD_SOURCES)
@@ -133,6 +133,7 @@ endmacro(set_pd_sources)
 macro(pd_set_sources PD_SOURCES)
 	set(PD_SOURCES_PATH ${PD_SOURCES})
 endmacro(pd_set_sources)
+
 #╭──────────────────────────────────────╮
 #│              Functions               │
 #╰──────────────────────────────────────╯
@@ -172,9 +173,11 @@ function (pd_add_datafile PROJECT_NAME DATA_FILE)
     get_property(LOCAL_DATA_FILES TARGET ${PROJECT_NAME} PROPERTY EXTERNAL_DATA_FILES)
 endfunction(pd_add_datafile)
 
+
 # ──────────────────────────────────────
 function(pd_set_lib_ext PROJECT_NAME)
     if(PD_EXTENSION)
+        set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".${PD_EXTENSION}")
     else()
         if (NOT (PD_FLOATSIZE EQUAL 64 OR PD_FLOATSIZE EQUAL 32))
             message(FATAL_ERROR "PD_FLOATSIZE must be 32 or 64")
@@ -276,64 +279,58 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
     )
 
 endfunction(pd_add_external)
+
+#╭──────────────────────────────────────╮
+#│ Function to keep compatibility with  │
+#│           the old version            │
+#╰──────────────────────────────────────╯
+function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
+    message(WARNING "add_pd_external is deprecated, use pd_add_external instead.\n")
+
     set(ALL_SOURCES ${EXTERNAL_SOURCES}) 
     list(APPEND ALL_SOURCES ${ARGN})
     source_group(src FILES ${ALL_SOURCES})
-    add_library(${OBJ_PROJECT_NAME} SHARED ${ALL_SOURCES})
-	set_target_properties(${OBJ_PROJECT_NAME} PROPERTIES PREFIX "")
-    set_property(TARGET ${OBJ_PROJECT_NAME} PROPERTY EXTERNAL_DATA_FILES "")
+    add_library(${PROJECT_NAME} SHARED ${ALL_SOURCES})
+    set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
+    set_property(TARGET ${PROJECT_NAME} PROPERTY EXTERNAL_DATA_FILES "")
 
-	target_include_directories(${OBJ_PROJECT_NAME} PRIVATE ${PD_SOURCES_PATH})
-	set_target_properties(${OBJ_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${EXTERNAL_NAME})
+    target_include_directories(${PROJECT_NAME} PRIVATE ${PD_SOURCES_PATH})
+    set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${EXTERNAL_NAME})
 
 	# Defines the output path of the external.
-  	set_target_properties(${OBJ_PROJECT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-	set_target_properties(${OBJ_PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-	set_target_properties(${OBJ_PROJECT_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+    set_target_properties(${PROJECT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+    set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+    set_target_properties(${PROJECT_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 	foreach(OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES})
 		    string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
-			set_target_properties(${OBJ_PROJECT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR})
-			set_target_properties(${OBJ_PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR})
-			set_target_properties(${OBJ_PROJECT_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR})
+            set_target_properties(${PROJECT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR})
+            set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR})
+            set_target_properties(${PROJECT_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR})
 	endforeach(OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES)
 
-    set_pd_lib_ext(${OBJ_PROJECT_NAME})
-    set_compiler_flags(${OBJ_PROJECT_NAME})
-    get_property(PD_EXTENSION TARGET ${OBJ_PROJECT_NAME} PROPERTY SUFFIX)
-    
-    if(PD_FLOATSIZE STREQUAL 64)
-        target_compile_definitions(${OBJ_PROJECT_NAME} PRIVATE PD_FLOATSIZE=64)
+    if (WIN32)
+        if (PD_FLOATSIZE EQUAL 64)
+            target_link_libraries(${PROJECT_NAME} PRIVATE "${PDBINDIR}/pd64.lib")
+        elseif (PD_FLOATSIZE EQUAL 32)
+            target_link_libraries(${PROJECT_NAME} PRIVATE "${PDBINDIR}/pd.lib")
+        endif()
+    elseif (APPLE)
+        set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
     endif()
 
-    add_datafile(${OBJ_PROJECT_NAME} ${CMAKE_BINARY_DIR}/${EXTERNAL_NAME}${PD_EXTENSION})
+    get_property(PD_EXTENSION TARGET ${PROJECT_NAME} PROPERTY SUFFIX)
+    
+    if(PD_FLOATSIZE STREQUAL 64)
+        target_compile_definitions(${PROJECT_NAME} PRIVATE PD_FLOATSIZE=64)
+    endif()
+
+    pd_set_lib_ext(${PROJECT_NAME})
+    pd_add_datafile(${PROJECT_NAME} ${CMAKE_BINARY_DIR}/${EXTERNAL_NAME}${PD_EXTENSION})
+
     cmake_language(EVAL CODE
-        "cmake_language(DEFER CALL install_libs [[${OBJ_PROJECT_NAME}]])"
+        "cmake_language(DEFER CALL pd_install_libs [[${PROJECT_NAME}]])"
     )
 endfunction(add_pd_external)
 
-# ──────────────────────────────────────
-function(external_link_libraries EXTERNAL_NAME LIBRARIES)
-    # check if thereis ~ in OBJ_NAME, if yes, replace it with _tilde
-    if(${EXTERNAL_NAME} MATCHES "~$")
-        string(REGEX REPLACE "~$" "_tilde" OBJ_PROJECT_NAME ${EXTERNAL_NAME})
-    else()
-        set(OBJ_PROJECT_NAME ${EXTERNAL_NAME})
-    endif()
-    set(ALL_LIBRARIES ${LIBRARIES}) 
-    list(APPEND ALL_LIBRARIES ${ARGN})
-    target_link_libraries(${OBJ_PROJECT_NAME} PRIVATE ${ALL_LIBRARIES})
-endfunction(external_link_libraries)
 
-# ──────────────────────────────────────
-function(external_include_directories EXTERNAL_NAME FOLDERS)
-    # check if thereis ~ in OBJ_NAME, if yes, replace it with _tilde
-    if(${EXTERNAL_NAME} MATCHES "~$")
-        string(REGEX REPLACE "~$" "_tilde" OBJ_PROJECT_NAME ${EXTERNAL_NAME})
-    else()
-        set(OBJ_PROJECT_NAME ${EXTERNAL_NAME})
-    endif()
-    set(ALL_FOLDERS ${FOLDERS}) 
-    list(APPEND ALL_FOLDERS ${ARGN})
-    target_include_directories(${OBJ_PROJECT_NAME} PRIVATE ${ALL_FOLDERS})
-endfunction(external_include_directories)
