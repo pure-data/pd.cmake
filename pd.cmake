@@ -1,4 +1,5 @@
 # check if cmake version is higher than 3.19
+# check if cmake version is higher than 3.19, we need cmake_language
 if(${CMAKE_VERSION} VERSION_LESS "3.19")
     message(FATAL_ERROR "CMake version must be at least 3.19")
 endif()
@@ -117,15 +118,21 @@ endif()
 #│                Macros                │
 #╰──────────────────────────────────────╯
 macro(set_pd_external_path EXTERNAL_PATH)
-	set(PD_OUTPUT_PATH ${EXTERNAL_PATH})
+    message(DEPRECATION "set_pd_external_path is deprecated, use pd_set_external_path")
 endmacro(set_pd_external_path)
 
+macro(pd_set_external_path EXTERNAL_PATH)
+	set(PD_OUTPUT_PATH ${EXTERNAL_PATH})
+endmacro(pd_set_external_path)
 # ──────────────────────────────────────
 # The macro sets the location of Pure Data sources.
 macro(set_pd_sources PD_SOURCES)
-	set(PD_SOURCES_PATH ${PD_SOURCES})
+    message(DEPRECATION "set_pd_sources is deprecated, use pd_set_sources")
 endmacro(set_pd_sources)
 
+macro(pd_set_sources PD_SOURCES)
+	set(PD_SOURCES_PATH ${PD_SOURCES})
+endmacro(pd_set_sources)
 #╭──────────────────────────────────────╮
 #│              Functions               │
 #╰──────────────────────────────────────╯
