@@ -173,9 +173,8 @@ function (pd_add_datafile PROJECT_NAME DATA_FILE)
 endfunction(pd_add_datafile)
 
 # ──────────────────────────────────────
-function(set_pd_lib_ext OBJ_PROJECT_NAME)
+function(pd_set_lib_ext PROJECT_NAME)
     if(PD_EXTENSION)
-        set_target_properties(${OBJ_PROJECT_NAME} PROPERTIES SUFFIX ".${PD_EXTENSION}")
     else()
         if (NOT (PD_FLOATSIZE EQUAL 64 OR PD_FLOATSIZE EQUAL 32))
             message(FATAL_ERROR "PD_FLOATSIZE must be 32 or 64")
@@ -211,9 +210,9 @@ function(set_pd_lib_ext OBJ_PROJECT_NAME)
         if (NOT PD_EXTENSION)
             message(FATAL_ERROR "Not possible to determine the extension of the library, please set PD_EXTENSION")
         endif()
-        set_target_properties(${OBJ_PROJECT_NAME} PROPERTIES SUFFIX ${PD_EXTENSION})
+        set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ${PD_EXTENSION})
     endif()
-endfunction(set_pd_lib_ext)
+endfunction(pd_set_lib_ext)
 
 # ──────────────────────────────────────
 function(set_compiler_flags OBJ_PROJECT_NAME)
