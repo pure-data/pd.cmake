@@ -7,12 +7,11 @@ set(PD_CMAKE_PATH ${CMAKE_CURRENT_LIST_DIR})
 set(PD_FLOATSIZE 32 CACHE STRING "the floatsize of Pd (32 or 64)")
 set(PD_SOURCES_PATH "" CACHE PATH "Path to Pd sources")
 
+
 if (APPLE)
-    set(PDLIBDIR "~/Library/Pd" CACHE PATH "Path where lib will be installed")
-elseif (UNIX)
-    # set(PDLIBDIR "/usr/local/lib/pd-externals" CACHE PATH "Path where lib will be installed")
+    set(PDLIBDIR "$ENV{HOME}/Library/Pd" CACHE PATH "Path where lib will be installed")
+elseif (UNIX) 
     set(PDLIBDIR "$ENV{HOME}/Documents/Pd/externals" CACHE PATH "Path where lib will be installed")
-    # TODO: This should be for user not for root
 elseif (WIN32)
     set(PDLIBDIR "$ENV{APPDATA}/Pd" CACHE PATH "Path where lib will be installed")
 else()
