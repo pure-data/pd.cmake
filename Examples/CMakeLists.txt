@@ -36,4 +36,4 @@ pd_add_datafile(simple_tilde "${CMAKE_SOURCE_DIR}/simple~/simple~-help.pd")
 pd_add_external(myfft~ ${CMAKE_SOURCE_DIR}/fft~/fft~.cpp 
         TARGET myfft_tilde)
 pd_add_datafile(simple "${CMAKE_SOURCE_DIR}/fft~/fft~-help.pd")
-target_link_libraries(myfft_tilde fftw3f) # Link with fftw3f library
+target_link_libraries(myfft_tilde PRIVATE fftw3f) # Link with fftw3f library

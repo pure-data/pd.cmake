@@ -6,45 +6,61 @@ on:
   pull_request:
     branches: ["main"]
 env:
-  LIBNAME: simple
-  LIBVERSION: 0.1
+  LIBNAME: mysimplelib
+  LIBVERSION: 0.0
 jobs:
   macos-universal-build:
     runs-on: macos-latest
     strategy:
       matrix:
         arch: [amd64, arm64]
-        precision: [32, 64] # TODO: We need to install PD64?
+        precision: [32, 64]
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
       - name: Install PureData and Deps
+        if: ${{ matrix.arch == 'amd64' }}
         run: |
-          brew install --cask pd
-          # Add here dynamic libraries that you use (ex. fftw3, gsl, ...).
-          # Search for the name in https://brew.sh/
+          arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          arch -x86_64 /usr/local/bin/brew install pd
+          arch -x86_64 /usr/local/bin/brew install fftw
+          arch -x86_64 /usr/local/bin/brew info fftw
+      - name: Install PureData and Deps
+        if: ${{ matrix.arch == 'arm64' }}
+        run: |
+          brew install pd
+          brew install fftw
       - name: Build Object for Arm
         if: ${{ matrix.arch == 'arm64' }}
         run: |
+          export CPLUS_INCLUDE_PATH="$CPLUS_INCLUDE_PATH:/opt/homebrew/include/"
+          export LDFLAGS="-L/opt/homebrew/lib"
+          export CPPFLAGS="-I/opt/homebrew/include"
+          cd Examples
           cmake . -B build -DCMAKE_OSX_ARCHITECTURES=arm64 -DPD_FLOATSIZE=${{ matrix.precision }}
           cmake --build build -j $(sysctl -n hw.logicalcpu)
       - name: Build Object for Intel
         if: ${{ matrix.arch == 'amd64' }}
         run: |
+          export CPLUS_INCLUDE_PATH="$CPLUS_INCLUDE_PATH:/usr/include/"
+          export LDFLAGS="-L/usr/lib"
+          export CPPFLAGS="-I/usr/include"
+          cd Examples
           cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_OSX_ARCHITECTURES=x86_64
           cmake --build build -j $(sysctl -n hw.logicalcpu)
       - name: Upload Object
         uses: actions/upload-artifact@v4
         with:
           name: ${{env.LIBNAME}}-macos-${{matrix.arch}}-${{matrix.precision}}
-          path: Binaries
+          path: ${{env.LIBNAME}}
   windows-build:
     runs-on: windows-latest
     strategy:
       matrix:
-        compiler: [mingw, msvc] # CHANGE: Choose between a compiler, you don't need boths
+        # TODO: msvc needs vcpkg support
+        compiler: [mingw] # , msvc ] # CHANGE: Choose between a compiler, you don't need boths
         arch: [amd64]
         precision: [32, 64]
     steps:
@@ -61,7 +77,7 @@ jobs:
         uses: msys2/setup-msys2@v2
         with:
           msystem: mingw64
-          install: make mingw-w64-x86_64-gcc mingw64/mingw-w64-x86_64-cmake
+          install: make mingw-w64-x86_64-gcc mingw64/mingw-w64-x86_64-cmake mingw-w64-x86_64-fftw
           # Add here dynamic libraries that you use (ex. fftw3, gsl, ...). 
           # Search for the name in https://packages.msys2.org/queue
           update: false
@@ -76,15 +92,24 @@ jobs:
         if: matrix.precision == '64'
         run: |
           winget install -e --id MillerPuckette.Pd64 --accept-source-agreements
-      - name: Configure and build
+      - name: Configure and build Visual Studio
+        if: matrix.compiler == 'msvc'
         run: |
+          cd Examples
+          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }}
+          cmake --build build
+      - name: Configure and build Mingw
+        shell: msys2 {0}
+        if: matrix.compiler == 'mingw'
+        run: |
+          cd Examples
           cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }}
           cmake --build build
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: ${{env.LIBNAME}}-f${{ matrix.precision }}-windows-${{ matrix.compiler }}
-          path: Binaries
+          path: ${{env.LIBNAME}}
   linux-build:
     runs-on: ubuntu-latest
     strategy:
@@ -101,6 +126,7 @@ jobs:
           sudo apt update
           sudo add-apt-repository ppa:pure-data/pure-data -y
           sudo apt install puredata -y
+          sudo apt install fftw3-dev -y
           # Add here dynamic libraries that you use (ex. fftw3, gsl, ...).
           # search for the name in https://packages.ubuntu.com/search
       - name: Install aarch64 gcc
@@ -116,23 +142,26 @@ jobs:
       - name: Build Object
         if: matrix.arch == 'amd64'
         run: |
+          cd Examples
           cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }}
           cmake --build build -- -j$(nproc)
       - name: Build Object
         if: matrix.arch == 'aarch64'
         run: |
+          cd Examples
           cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_PROCESSOR=aarch64
           cmake --build build -- -j$(nproc)
       - name: Build Object
         if: matrix.arch == 'arm'
         run: |
+          cd Examples
           cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_PROCESSOR=arm
           cmake --build build -- -j$(nproc)
       - name: Upload Object
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.LIBNAME }}-linux-${{matrix.arch}}-${{matrix.precision}}
-          path: Binaries
+          path: ${{env.LIBNAME}}
   package-artifacts:
     needs: [macos-universal-build, windows-build, linux-build]
     runs-on: ubuntu-latest
