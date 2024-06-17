@@ -9,9 +9,9 @@ set(PD_SOURCES_PATH "" CACHE PATH "Path to Pd sources")
 
 
 if (APPLE)
-    set(PDLIBDIR "$ENV{HOME}/Library/Pd" CACHE PATH "Path where lib will be installed")
+    set(PDLIBDIR "~/Library/Pd" CACHE PATH "Path where lib will be installed")
 elseif (UNIX) 
-    set(PDLIBDIR "$ENV{HOME}/Documents/Pd/externals" CACHE PATH "Path where lib will be installed")
+    set(PDLIBDIR "/usr/local/lib/pd-externals" CACHE PATH "Path where lib will be installed")
 elseif (WIN32)
     set(PDLIBDIR "$ENV{APPDATA}/Pd" CACHE PATH "Path where lib will be installed")
 else()
