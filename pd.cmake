@@ -175,6 +175,9 @@ endfunction(pd_add_datafile)
 
 # ──────────────────────────────────────
 function(pd_set_lib_ext PROJECT_NAME)
+    if(EMSCRIPTEN)
+        return()
+    endif()
     if(PD_EXTENSION)
         set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".${PD_EXTENSION}")
     else()
