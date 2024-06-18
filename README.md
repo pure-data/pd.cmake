@@ -15,43 +15,44 @@ The repository offers a set of script to facilitate the creation of [CMake](http
 
 ## Pre-required
 
-To compile Pd externals using _pd.cmake_, you need [CMake](https://cmake.org/) (minimum version 3.15) and a build system or an IDE (like Unix makefile, XCode, Visual Studio, Code::Blocks, etc.). You also need the Pure Data sources, that are generally included within your Pure Data distribution and [pd.cmake](https://github.com/pure-data/pd.build/archive/main.zip). If you use [Git](https://git-scm.com/) to manage your project, it is reccommend to include `pd.cmake` as a submodule `git submodule add https://github.com/pure-data/pd.cmake`.
+To compile Pd externals using _pd.cmake_, you need [CMake](https://cmake.org/) (minimum version 3.18) and a build system or an IDE (like Unix MakeFile, XCode, Visual Studio, mingw64, etc.). You also need the Pure Data Sources, which are included within your Pure Data distribution and pd.cmake. If you use [Git](https://git-scm.com/) to manage your project, it is recommended to include `pd.cmake` as a submodule `git submodule add https://github.com/pure-data/pd.cmake`.
 
 ## Configuration
 
-The configuration of the CMakeList with pd.cmake is pretty straight forward but depends on how you manage your project (folder, sources, dependencies, etc.). Here is an example that demonstrate the basic usage of the pd.cmake system:
+The configuration of the CMakeLists with pd.cmake is pretty straight forward but depends on how you manage your project (folder, sources, dependencies, etc.). Here is an example that demonstrate the basic usage of the `pd.cmake` system:
 
 ```cmake
 # Define your standard CMake header (for example):
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.18)
 
 # Include pd.cmake (1):
-include(${CMAKE_CURRENT_SOURCE_DIR}/pd.cmake/pd.cmake)
+set(PDCMAKE_DIR pd.cmake/ CACHE PATH "Path to pd.cmake")
+include(${PDCMAKE_DIR}/pd.cmake)
 
 # Declare the name of the project:
-project(my_objects)
+project(my_lib)
 
 # Add one or several externals (5):
-add_pd_external(myobj1 obj_name1 ${CMAKE_CURRENT_SOURCE_DIR}/Sources/obj1.c)
+pd_add_external(obj_name1 Sources/obj1.c)
 
-add_pd_external(myobj2 obj_name2 ${CMAKE_CURRENT_SOURCE_DIR}/Sources/obj2.cpp)
+pd_add_external(obj_name2 Sources/obj2.cpp)
 ```
 
 Further information:
 
 1. The path _pd.cmake_ depends on where you installed _pd.cmake, here we assume that \_pd.cmake_ is localized at the root directory of you project.
-2. Here the externals are installed in the _Binaries_ folder, you can change it using `set_pd_external_path(PATH)`.
-3. As of Pd 0.51-0 you can compile a ["Double precision" Pd](http://msp.ucsd.edu/Pd_documentation/x6.htm#s6.6). If you intend to use your externals in such an environment, you must also compile them with double precision by adding this line `.
-4. The function adds a new subproject to the main project. This subproject matches to a new external allowing to compile only one object without compiling all the others. The first argument is the name of the subproject, the second argument is the name of the external and the third argument are the sources. If you use more than one file, you can use `GLOB`, in this case, we compile all `.cpp` files inside `Sources`.
+2. The compiled externals will be outputed in the build folder. When can choose the folder name using `cmake . -B MY_OUTPUT_FOLDER`.
+3. As of Pd 0.51-0 you can compile a ["Double precision" Pd](http://msp.ucsd.edu/Pd_documentation/x6.htm#s6.6). If you intend to use your externals in such an environment, you must also compile them with double precision by adding this line `-DPD_FLOATSIZE=64`.
+4. The function adds a new subproject to the main project. This subproject matches to a new external allowing to compile only one object without compiling all the others. The first argument is the name of the object (used as TARGET name) and the third argument are the sources. If you use more than one file, you can use `GLOB`, in this case, we compile all `.cpp` files inside `Sources`.
 
 ```cmake
 file(GLOB EXTERNAL_SOURCES "${CMAKE_SOURCE_DIR}/Sources/*.cpp")
-add_pd_external(myobj3 myobj3 ${EXTERNAL_SOURCES})
+pd_add_external(myobj3 ${EXTERNAL_SOURCES})
 ```
 
 ## Compilation
 
-The generation of the build system or the IDE project is similar to any CMake project. The basic usage follows these steps from the project folder (where _CMakeList_ is localized):
+The generation of the build system or the IDE project is similar to any CMake project. The basic usage follows these steps from the project folder (where _CMakeLists_ is localized):
 
 ```bash
 cmake . -B build
@@ -59,50 +60,62 @@ cmake --build build
 ```
 
 > [!TIP]
-> For big projects, you can use `cmake --build build -j4` for parallel build. Where `4` is the number of CPUs.
+> For big projects, you can use `cmake --build build -j4` for a parallel build. Where `4` is the number of CPUs.
+
+## Variables
+
+- `PD_CMAKE_PATH`: Define the `PATH` where is located _pd.cmake_.
+- `PD_SOURCES_PATH`: Define the `PATH` where is located `m_pd.h`.
+- `PDLIBDIR`: Define the `PATH` where the externals should be installed.
+- `PDBINDIR`: Define the `PATH` where is located `pd.dll` or `pd64.dll` (Just for Windows).
+- `PD_FLOATSIZE`: Define the float size (32 or 64).
+- `PD_INSTALL_LIBS`: Define if we must install the externals in `PDLIBDIR` or not (True or False).
+- `PD_ENABLE_TILDE_TARGET_WARNING`: Enable/Disable a warning when using target name (aka Object name) with `~`.
+
+> [!NOTE]
+> About `PD_ENABLE_TILDE_TARGET_WARNING`. We keep this warning because `Cmake` does not accept target name with the `~` character. So we need to change it, the default is replace `~` by `_tilde`.
 
 ## Github Actions
 
-`pd.cmake` offers an example for easily integrating GitHub Actions into your workflow, it facilitates the compilation process for your PureData Library without the need for external resources or borrowing machines (for example).
+`pd.cmake` offers an example for easily integrating GitHub Actions into your workflow (allowing automation for compiling the objects), it facilitates the compilation process for your PureData Library without the need for external resources or borrowing machines (for example).
 
 <details><summary>How to use for your Library</summary>
 
 1. Create Necessary Folders:
-    * Navigate to your Library Folder.
-    * Create a new folder named `.github`.
-    * Within `.github`, create another folder named `workflows`.
+
+   - Navigate to your Library Folder.
+   - Create a new folder named `.github`.
+   - Within `.github`, create another folder named `workflows`.
 
 2. Download Example File:
-    * Download the provided example file from this link [here](https://raw.githubusercontent.com/pure-data/pd.cmake/main/.github/workflows/c-cpp.yml).
-    * Paste the downloaded file into the workflows folder you just created.
+   - Download the provided example file from this link [here](https://raw.githubusercontent.com/pure-data/pd.cmake/main/.github/workflows/c-cpp.yml).
+   - Paste the downloaded file into the workflows folder you just created.
 3. Modify Variables:
-    * Open the downloaded file.
-    * Find the variable `LIBNAME` on line 09.
-    * Replace `simple` with the name of your library.
+   - Open the downloaded file.
+   - Find the variable `LIBNAME` on line 09.
+   - Replace `simple` with the name of your library.
 4. Commit and Upload:
-    * Commit the changes to your repository on GitHub.
+   - Commit the changes to your repository on GitHub.
 5. Run Workflow:
-    * Go to the Actions tab on your GitHub repository page.
-    * Look for an action called `C/C++ CI` (if you don't changed the name).
-    * Click on it, then click Run workflow.
-    * Wait for the workflow to complete.
+   - Go to the Actions tab on your GitHub repository page.
+   - Look for an action called `C/C++ CI` (if you don't change the name).
+   - Click on it, then click Run workflow.
+   - Wait for the workflow to complete.
 6. Download Result:
-    * After the workflow has finished running, refresh the page.
-    * Look for a new item, usually titled with the last commit message.
-    * If you see a blue checkbox, click on it.
-    * Scroll down and locate a file named `yourlibname-ALL-binaries`.
-    * Download this file.
+   - After the workflow has finished running, refresh the page.
+   - Look for a new item, usually titled with the last commit message.
+   - If you see a blue checkbox, click on it.
+   - Scroll down and locate a file named `yourlibname-ALL-binaries`.
+   - Download this file.
 
 If the workflow fails (you see a red `x` instead of a checkbox), you'll need to debug. You can seek help in the issues section of the `pd.cmake` repository.
 
 #### About Dynamic Libraries
 
-If you use `fftw3` in your object or anything else, you will need to install it. There is indications in the `c-cpp.yml` where you add this, for Windows, prefer `mingw64` build for now.
+If you use `fftw3` in your object or anything else, you must install it. There are indications in the `c-cpp.yml` where you add your required libraries. For Windows, it is preferable to use `mingw64`.
 
 </details>
-
 
 ## See Also
 
 - [pd-lib-builder](https://github.com/pure-data/pd-lib-builder)
-
