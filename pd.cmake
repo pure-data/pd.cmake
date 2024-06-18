@@ -97,8 +97,8 @@ if(NOT PD_SOURCES_PATH)
             set(PDBINDIR ${PD_SOURCES_PATH}/../bin)
         endif()
         find_path(PD_HEADER_PATH m_pd.h PATHS ${PD_SOURCES_PATH})
-        if (NOT PD_HEADER_PATH)
-            message(FATAL_ERROR "<m_pd.h> not found in /usr/include/pd/, is Pd installed?")
+        if (NOT PD_HEADER_PATH AND NOT EMSCRIPTEN)
+            message(WARNING "<m_pd.h> not found in /usr/include/pd/, is Pd installed?")
         endif()
 
     # Unknown
@@ -110,7 +110,6 @@ if(NOT PD_SOURCES_PATH)
     set(PD_SOURCES_PATH ${PD_SOURCES_PATH})
 
 endif()
-
 
 #╭──────────────────────────────────────╮
 #│                Macros                │
@@ -240,14 +239,15 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
 
     if (EMSCRIPTEN)
         add_library(${PROJECT_NAME} STATIC ${EXTERNAL_SOURCES})
+        set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${PD_EXTERNAL_NAME}) # External Name output
     else()
         add_library(${PROJECT_NAME} SHARED ${EXTERNAL_SOURCES})
+        set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "") # remove lib prefix
+        set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${PD_EXTERNAL_NAME}) 
     endif()
 
     # Configuration of the compilation
-    set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "") # remove lib prefix
     target_include_directories(${PROJECT_NAME} PRIVATE ${PD_SOURCES_PATH}) # Add Pd Includes
-    set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${PD_EXTERNAL_NAME}) # External Name output
 
     if (WIN32)
         if (PD_FLOATSIZE EQUAL 64)
@@ -322,7 +322,7 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
         set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
     endif()
 
-    get_property(PD_EXTENSION TARGET ${PROJECT_NAME} PROPERTY SUFFIX)
+    get_property(PD_EXTENSION TARGET ${PROJECT_NAME} PROPERTY SUFFIX) # set extension
     
     if(PD_FLOATSIZE STREQUAL 64)
         target_compile_definitions(${PROJECT_NAME} PRIVATE PD_FLOATSIZE=64)
