@@ -1,5 +1,5 @@
 # set minimal version of cmake
-cmake_minimum_required(VERSION 3.15) 
+cmake_minimum_required(VERSION 3.18) 
 
 # import pd.cmake file
 set(PDCMAKE_DIR ../ CACHE PATH "Path to pd.cmake")
@@ -12,7 +12,7 @@ include(${PDCMAKE_DIR}/pd.cmake)
 #│ of your library. For example, else,  │
 #│           cyclone, etc...            │
 #╰──────────────────────────────────────╯
-project(mysimplelib)
+# project(mysimplelib) # defined in ROOT CMakeLists.txt
 
 #╭──────────────────────────────────────╮
 #│          Obj 1 - Simple obj          │
