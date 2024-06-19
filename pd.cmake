@@ -7,6 +7,7 @@ set(PDCMAKE_DIR ${CMAKE_CURRENT_LIST_DIR} CACHE STRING "PATH where is located pd
 set(PD_FLOATSIZE 32 CACHE STRING "the floatsize of Pd (32 or 64)")
 set(PD_SOURCES_PATH "" CACHE PATH "Path to Pd sources")
 set(PD_ENABLE_TILDE_TARGET_WARNING ON CACHE BOOL "Warning for Target with tilde")
+set(PD_INSTALL_LIBS ON CACHE BOOL "Install Pd Externals on PDLIBDIR")
 
 if (APPLE)
     set(PDLIBDIR "~/Library/Pd" CACHE PATH "Path where lib will be installed")
