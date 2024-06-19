@@ -20,14 +20,13 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
-      - name: Install PureData and Deps
+      - name: Install PureData and Deps x86_64 Mac
         if: ${{ matrix.arch == 'amd64' }}
         run: |
           arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
           arch -x86_64 /usr/local/bin/brew install pd
           arch -x86_64 /usr/local/bin/brew install fftw
-          arch -x86_64 /usr/local/bin/brew info fftw
-      - name: Install PureData and Deps
+      - name: Install PureData and Deps arm64 Mac
         if: ${{ matrix.arch == 'arm64' }}
         run: |
           brew install pd
@@ -37,17 +36,13 @@ jobs:
         run: |
           export CPLUS_INCLUDE_PATH="$CPLUS_INCLUDE_PATH:/opt/homebrew/include/"
           export LDFLAGS="-L/opt/homebrew/lib"
-          export CPPFLAGS="-I/opt/homebrew/include"
-          cd Examples
           cmake . -B build -DCMAKE_OSX_ARCHITECTURES=arm64 -DPD_FLOATSIZE=${{ matrix.precision }}
           cmake --build build -j $(sysctl -n hw.logicalcpu)
-      - name: Build Object for Intel
+      - name: Build Object for x86_64
         if: ${{ matrix.arch == 'amd64' }}
         run: |
-          export CPLUS_INCLUDE_PATH="$CPLUS_INCLUDE_PATH:/usr/include/"
-          export LDFLAGS="-L/usr/lib"
-          export CPPFLAGS="-I/usr/include"
-          cd Examples
+          export CPLUS_INCLUDE_PATH="$CPLUS_INCLUDE_PATH:/usr/local/include/"
+          export LDFLAGS="-L/usr/local/lib"
           cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_OSX_ARCHITECTURES=x86_64
           cmake --build build -j $(sysctl -n hw.logicalcpu)
       - name: Upload Object
@@ -95,14 +90,12 @@ jobs:
       - name: Configure and build Visual Studio
         if: matrix.compiler == 'msvc'
         run: |
-          cd Examples
           cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }}
           cmake --build build
       - name: Configure and build Mingw
         shell: msys2 {0}
         if: matrix.compiler == 'mingw'
         run: |
-          cd Examples
           cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }}
           cmake --build build
       - name: Upload
@@ -142,19 +135,16 @@ jobs:
       - name: Build Object
         if: matrix.arch == 'amd64'
         run: |
-          cd Examples
           cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }}
           cmake --build build -- -j$(nproc)
       - name: Build Object
         if: matrix.arch == 'aarch64'
         run: |
-          cd Examples
           cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_PROCESSOR=aarch64
           cmake --build build -- -j$(nproc)
       - name: Build Object
         if: matrix.arch == 'arm'
         run: |
-          cd Examples
           cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_PROCESSOR=arm
           cmake --build build -- -j$(nproc)
       - name: Upload Object
