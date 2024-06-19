@@ -64,7 +64,7 @@ cmake --build build
 
 ## Variables
 
-- `PD_CMAKE_PATH`: Define the `PATH` where is located _pd.cmake_.
+- `PDCMAKE_DIR`: Define the `PATH` where is located _pd.cmake_.
 - `PD_SOURCES_PATH`: Define the `PATH` where is located `m_pd.h`.
 - `PDLIBDIR`: Define the `PATH` where the externals should be installed.
 - `PDBINDIR`: Define the `PATH` where is located `pd.dll` or `pd64.dll` (Just for Windows).
