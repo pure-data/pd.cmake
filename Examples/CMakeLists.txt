@@ -12,7 +12,7 @@ include(${PDCMAKE_DIR}/pd.cmake)
 #│ of your library. For example, else,  │
 #│           cyclone, etc...            │
 #╰──────────────────────────────────────╯
-# project(mysimplelib) # defined in ROOT CMakeLists.txt
+project(examples) # defined in ROOT CMakeLists.txt
 
 #╭──────────────────────────────────────╮
 #│          Obj 1 - Simple obj          │

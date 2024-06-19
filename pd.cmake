@@ -135,45 +135,16 @@ endmacro(pd_set_sources)
 #╭──────────────────────────────────────╮
 #│              Functions               │
 #╰──────────────────────────────────────╯
-function(pd_install_libs OBJ_NAME)
-    if (PD_INSTALL_LIBS)
-        if(NOT EXISTS ${PDLIBDIR})
-            file(MAKE_DIRECTORY ${PDLIBDIR})
-        endif()
-        # if (PD_INSTALL_LIBS) # TODO: Add this
-            get_property(LOCAL_DATA_FILES TARGET ${OBJ_NAME} PROPERTY EXTERNAL_DATA_FILES)
-            foreach(DATA_FILE ${LOCAL_DATA_FILES})
-                get_filename_component(DATA_FILE ${DATA_FILE} ABSOLUTE)
-                get_filename_component(FILE_NAME ${DATA_FILE} NAME)
-
-                add_custom_command(
-                    TARGET ${OBJ_NAME} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E make_directory ${PDLIBDIR}/${PROJECT_NAME}
-                    COMMAND ${CMAKE_COMMAND} -E copy ${DATA_FILE} ${PDLIBDIR}/${PROJECT_NAME}/${FILE_NAME}
-                )
-            endforeach()
-    endif()
-endfunction(pd_install_libs)
-
-# ──────────────────────────────────────
 function (pd_add_datafile PROJECT_NAME DATA_FILE)
     if(${PROJECT_NAME} MATCHES "~$")
         string(REGEX REPLACE "~$" "_tilde" PROJECT_NAME ${PROJECT_NAME})
     endif()
-    set(DATA_FILE ${DATA_FILE}) 
-    list(APPEND DATA_FILE ${ARGN}) # case use list for multiple files
-
-    get_property(LOCAL_DATA_FILES TARGET ${PROJECT_NAME} PROPERTY EXTERNAL_DATA_FILES)
-    foreach(FILE IN LISTS DATA_FILE)
-        list(APPEND LOCAL_DATA_FILES ${FILE})
-    endforeach()
-    set_property(TARGET ${PROJECT_NAME} PROPERTY EXTERNAL_DATA_FILES ${LOCAL_DATA_FILES})
-    get_property(LOCAL_DATA_FILES TARGET ${PROJECT_NAME} PROPERTY EXTERNAL_DATA_FILES)
+    install(FILES ${DATA_FILE} DESTINATION ${PDLIBDIR}/${PROJECT_NAME})
 endfunction(pd_add_datafile)
 
 
 # ──────────────────────────────────────
-function(pd_set_lib_ext PROJECT_NAME)
+macro(pd_set_lib_ext PROJECT_NAME)
     if(EMSCRIPTEN)
         return()
     endif()
@@ -216,7 +187,7 @@ function(pd_set_lib_ext PROJECT_NAME)
         endif()
         set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ${PD_EXTENSION})
     endif()
-endfunction(pd_set_lib_ext)
+endmacro(pd_set_lib_ext)
 
 # ──────────────────────────────────────
 function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
@@ -246,7 +217,6 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
         set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${PD_EXTERNAL_NAME}) 
     endif()
 
-    # Configuration of the compilation
     target_include_directories(${PROJECT_NAME} PRIVATE ${PD_SOURCES_PATH}) # Add Pd Includes
 
     if (WIN32)
@@ -276,11 +246,7 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
     endif()
 
     pd_set_lib_ext(${PROJECT_NAME})
-    pd_add_datafile(${PROJECT_NAME} ${CMAKE_BINARY_DIR}/${EXTERNAL_NAME}${PD_EXTENSION})
-    cmake_language(EVAL CODE
-        "cmake_language(DEFER CALL pd_install_libs [[${PROJECT_NAME}]])"
-    )
-
+    pd_add_datafile(${PROJECT_NAME} ${CMAKE_BINARY_DIR}/${PD_EXTERNAL_NAME}${PD_EXTENSION})
 endfunction(pd_add_external)
 
 #╭──────────────────────────────────────╮
@@ -329,11 +295,8 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
     endif()
 
     pd_set_lib_ext(${PROJECT_NAME})
-    pd_add_datafile(${PROJECT_NAME} ${CMAKE_BINARY_DIR}/${EXTERNAL_NAME}${PD_EXTENSION})
+    pd_add_datafile(${PROJECT_NAME} "${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}${PD_EXTENSION}")
 
-    cmake_language(EVAL CODE
-        "cmake_language(DEFER CALL pd_install_libs [[${PROJECT_NAME}]])"
-    )
 endfunction(add_pd_external)
 
 
