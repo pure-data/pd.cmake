@@ -95,8 +95,7 @@ if(NOT PD_SOURCES_PATH)
             HINTS ${PDBINDIR})
         find_path(PD_HEADER_PATH m_pd.h PATHS ${PD_SOURCES_PATH})
         if(NOT PD_HEADER_PATH)
-            message(
-                FATAL_ERROR "<m_pd.h> not found in C:\\Program Files\\Pd\\src, is Pd installed?")
+            message(FATAL_ERROR "<m_pd.h> not found in C:\\Program Files\\Pd\\src, is Pd installed?")
         endif()
 
     elseif(APPLE)
@@ -106,18 +105,12 @@ if(NOT PD_SOURCES_PATH)
                 get_filename_component(PD_SOURCES_PATH "${app}/Contents/Resources/src/" ABSOLUTE)
             endforeach()
         else()
-            message(
-                FATAL_ERROR
-                    "PD_SOURCES_PATH not set and no Pd.app found in /Applications, is Pd installed?"
-            )
+            message(FATAL_ERROR "PD_SOURCES_PATH not set and no Pd.app found in /Applications, is Pd installed?")
         endif()
 
         find_path(PD_HEADER_PATH m_pd.h PATHS ${PD_SOURCES_PATH})
         if(NOT PD_HEADER_PATH)
-            message(
-                FATAL_ERROR
-                    "<m_pd.h> not found in /Applications/Pd.app/Contents/Resources/src/, is Pd installed?"
-            )
+            message(FATAL_ERROR "<m_pd.h> not found in /Applications/Pd.app/Contents/Resources/src/, is Pd installed?")
         endif()
         message(STATUS "PD_SOURCES_PATH not set, using ${PD_SOURCES_PATH}")
 
@@ -145,8 +138,7 @@ endif()
 macro(set_pd_external_path EXTERNAL_PATH)
     message(
         DEPRECATION
-            "set_pd_external_path was removed, you can set PDLIBDIR and run cmake with '-DPD_INSTALL_LIBS=ON' instead"
-    )
+            "set_pd_external_path was removed, you can set PDLIBDIR and run cmake with '-DPD_INSTALL_LIBS=ON' instead")
 endmacro(set_pd_external_path)
 
 # ──────────────────────────────────────
@@ -165,7 +157,13 @@ function(pd_add_datafile OBJ_TARGET DATA_FILE)
     if(${OBJ_TARGET} MATCHES "~$")
         string(REGEX REPLACE "~$" "_tilde" OBJ_TARGET ${OBJ_TARGET})
     endif()
-    install(FILES ${DATA_FILE} DESTINATION ${PDLIBDIR}/${PROJECT_NAME})
+    foreach(DATA_FILE ${DATA_FILE})
+        if(IS_DIRECTORY ${DATA_FILE})
+            install(DIRECTORY ${DATA_FILE} DESTINATION ${PDLIBDIR}/${PROJECT_NAME})
+        else()
+            install(FILES ${DATA_FILE} DESTINATION ${PDLIBDIR}/${PROJECT_NAME})
+        endif()
+    endforeach()
 endfunction(pd_add_datafile)
 
 # ──────────────────────────────────────
@@ -208,10 +206,7 @@ macro(pd_set_lib_ext OBJ_TARGET_NAME)
         endif()
 
         if(NOT PD_EXTENSION)
-            message(
-                FATAL_ERROR
-                    "Not possible to determine the extension of the library, please set PD_EXTENSION"
-            )
+            message(FATAL_ERROR "Not possible to determine the extension of the library, please set PD_EXTENSION")
         endif()
         set_target_properties(${OBJ_TARGET_NAME} PROPERTIES SUFFIX ${PD_EXTENSION})
     endif()
@@ -240,8 +235,7 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
 
     if(EMSCRIPTEN)
         add_library(${OBJ_TARGET_NAME} STATIC ${EXTERNAL_SOURCES})
-        set_target_properties(${OBJ_TARGET_NAME} PROPERTIES OUTPUT_NAME ${PD_EXTERNAL_NAME}
-        )# External name output
+        set_target_properties(${OBJ_TARGET_NAME} PROPERTIES OUTPUT_NAME ${PD_EXTERNAL_NAME}) # External name output
     else()
         add_library(${OBJ_TARGET_NAME} SHARED ${EXTERNAL_SOURCES})
         set_target_properties(${OBJ_TARGET_NAME} PROPERTIES PREFIX "")
@@ -321,12 +315,9 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
 
     foreach(OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES})
         string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
-        set_target_properties(${PROJECT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG}
-                                                         ${CMAKE_BINARY_DIR})
-        set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG}
-                                                         ${CMAKE_BINARY_DIR})
-        set_target_properties(${PROJECT_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG}
-                                                         ${CMAKE_BINARY_DIR})
+        set_target_properties(${PROJECT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR})
+        set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR})
+        set_target_properties(${PROJECT_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG} ${CMAKE_BINARY_DIR})
     endforeach(OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES)
 
     if(WIN32)
@@ -349,8 +340,7 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
     endif()
 
     pd_set_lib_ext(${PROJECT_NAME})
-    pd_add_datafile(${PROJECT_NAME}
-                    "${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}${PD_EXTENSION}")
+    pd_add_datafile(${PROJECT_NAME} "${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}${PD_EXTENSION}")
 
     if(PD_INSTALL_LIBS)
 
