@@ -169,19 +169,28 @@ endmacro(pd_set_sources)
 # │              Functions               │
 # ╰──────────────────────────────────────╯
 function(pd_add_datafile OBJ_TARGET DATA_FILE)
+    set(BOOLEAN_ARGS) # No args for now
+    set(ONE_ARGS) # Define optional arg for TARGET
+    set(MULTI_ARGS DESTINATION IGNORE_DIR)
+    cmake_parse_arguments(PD_DATAFILE "${BOOLEAN_ARGS}" "${ONE_ARGS}" "${MULTI_ARGS}" ${ARGN})
     if(${OBJ_TARGET} MATCHES "~$")
         string(REGEX REPLACE "~$" "_tilde" OBJ_TARGET ${OBJ_TARGET})
     endif()
 
-    if(OBJ_TARGET STREQUAL PROJECT_NAME)
-
-    endif()
 
     foreach(DATA_FILE ${DATA_FILE})
         if(IS_DIRECTORY ${DATA_FILE})
-            install(DIRECTORY ${DATA_FILE} DESTINATION ${PDLIBDIR}/${PROJECT_NAME})
+            if(PD_DATAFILE_DESTINATION)
+                install(DIRECTORY ${DATA_FILE} DESTINATION ${PDLIBDIR}/${PROJECT_NAME}/${PD_DATAFILE_DESTINATION})
+            else()
+                install(DIRECTORY ${DATA_FILE} DESTINATION ${PDLIBDIR}/${PROJECT_NAME})
+            endif()
         else()
-            install(FILES ${DATA_FILE} DESTINATION ${PDLIBDIR}/${PROJECT_NAME})
+            if(PD_DATAFILE_DESTINATION)
+                install(FILES ${DATA_FILE} DESTINATION ${PDLIBDIR}/${PROJECT_NAME}/${PD_DATAFILE_DESTINATION})
+            else()
+                install(FILES ${DATA_FILE} DESTINATION ${PDLIBDIR}/${PROJECT_NAME})
+            endif()
         endif()
     endforeach()
 
