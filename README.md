@@ -4,12 +4,12 @@ The repository offers a set of script to facilitate the creation of [CMake](http
 
 ---
 
-1. [Pre-required](https://github.com/pure-data/pd.cmake#pre-required)
-2. [Configuration](https://github.com/pure-data/pd.cmake#Configuration)
-3. [Generation](https://github.com/pure-data/pd.cmake#Generation)
-4. [Github Actions](https://github.com/pure-data/pd.cmake#Github-Actions)
-5. [Examples](https://github.com/pure-data/pd.cmake#Examples)
-6. [See Also](https://github.com/pure-data/pd.cmake#See-Also)
+1. [Pre-required](#pre-required)
+2. [Configuration](#configuration)
+3. [Compilation](#compilation)
+4. [Variables](#variables)
+5. [Github Actions](#github-actions)
+6. [See Also](#see-also)
 
 ---
 
