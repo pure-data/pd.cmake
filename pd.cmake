@@ -250,7 +250,7 @@ endmacro(pd_set_lib_ext)
 function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
 
     set(BOOLEAN_ARGS) # No args for now
-    set(ONE_ARGS TARGET) # Define optional arg for TARGET
+    set(ONE_ARGS TARGET EXTERNAL_NAME) # Define optional arg for TARGET
     set(MULTI_ARGS CXX_FLAGS C_FLAGS LINK_LIBRARIES) # Define multi args, CXX_FLAGS C_FLAGS
     cmake_parse_arguments(PD_EXTERNAL "${BOOLEAN_ARGS}" "${ONE_ARGS}" "${MULTI_ARGS}" ${ARGN})
 
@@ -267,6 +267,10 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
     else()
         set(OBJ_TARGET_NAME ${PD_EXTERNAL_NAME})
     endif()
+    
+    if(DEFINED PD_EXTERNAL_EXTERNAL_NAME)
+    		set(PD_EXTERNAL_NAME "${PD_EXTERNAL_EXTERNAL_NAME}")
+	endif()
 
     if(EMSCRIPTEN OR PD_BUILD_STATIC_OBJECTS)
         add_library(${OBJ_TARGET_NAME} STATIC ${EXTERNAL_SOURCES})
