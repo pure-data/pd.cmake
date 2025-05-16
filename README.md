@@ -15,40 +15,56 @@ The repository offers a set of script to facilitate the creation of [CMake](http
 
 ## Pre-required
 
-To compile Pd externals using _pd.cmake_, you need [CMake](https://cmake.org/) (minimum version 3.18) and a build system or an IDE (like Unix MakeFile, XCode, Visual Studio, mingw64, etc.). You also need the Pure Data Sources, which are included within your Pure Data distribution and pd.cmake. If you use [Git](https://git-scm.com/) to manage your project, it is recommended to include `pd.cmake` as a submodule `git submodule add https://github.com/pure-data/pd.cmake`.
+To compile Pure Data externals using **`pd.cmake`**, you need [CMake](https://cmake.org/) (version 3.18 or higher) and a build system or IDE (such as Unix Makefiles, Xcode, Visual Studio, MinGW, etc.). You also need the PureData installed on your machine. In your `CMakeLists.txt`, `pd.cmake` can be included as follows:
+
+```cmake
+set(PDCMAKE_FILE ${CMAKE_BINARY_DIR}/pd.cmake)
+set(PDCMAKE_VERSION "v0.2.0")
+if(NOT EXISTS "${PDCMAKE_FILE}")
+    file(DOWNLOAD https://raw.githubusercontent.com/pure-data/pd.cmake/refs/tags/${PDCMAKE_VERSION}/pd.cmake ${PDCMAKE_FILE})
+endif()
+include(${PDCMAKE_FILE})
+```
+
+🔧 Note: Make sure to replace `PDCMAKE_VERSION` with the latest tag version.
 
 ## Configuration
 
-The configuration of the CMakeLists with pd.cmake is pretty straight forward but depends on how you manage your project (folder, sources, dependencies, etc.). Here is an example that demonstrate the basic usage of the `pd.cmake` system:
+The configuration of the CMakeLists with `pd.cmake` is pretty straight forward but depends on how you manage your project (folder, sources, dependencies, etc.). Here is an example that demonstrate the basic usage of the `pd.cmake` system:
 
 ```cmake
 # Define your standard CMake header (for example):
 cmake_minimum_required(VERSION 3.18)
 
 # Include pd.cmake (1):
-set(PDCMAKE_DIR pd.cmake/ CACHE PATH "Path to pd.cmake")
-include(${PDCMAKE_DIR}/pd.cmake)
+set(PDCMAKE_FILE ${CMAKE_BINARY_DIR}/pd.cmake)
+set(PDCMAKE_VERSION "v0.2.0")
+if(NOT EXISTS "${PDCMAKE_FILE}")
+    file(DOWNLOAD https://raw.githubusercontent.com/pure-data/pd.cmake/refs/tags/${PDCMAKE_VERSION}/pd.cmake ${PDCMAKE_FILE})
+endif()
+include(${PDCMAKE_FILE})
 
 # Declare the name of the project:
 project(my_lib)
 
 # Add one or several externals (5):
 pd_add_external(obj_name1 Sources/obj1.c)
-
 pd_add_external(obj_name2 Sources/obj2.cpp)
+
+file(GLOB EXTERNAL_SOURCES "${CMAKE_SOURCE_DIR}/Sources/*.cpp")
+pd_add_external(obj_name3 "${EXTERNAL_SOURCES}")
 ```
 
 Further information:
 
-1. The path _pd.cmake_ depends on where you installed _pd.cmake, here we assume that \_pd.cmake_ is localized at the root directory of you project.
-2. The compiled externals will be outputed in the build folder. When can choose the folder name using `cmake . -B MY_OUTPUT_FOLDER`.
-3. As of Pd 0.51-0 you can compile a "Double precision" Pd. If you intend to use your externals in such an environment, you must also compile them with double precision by adding this line `-DPD_FLOATSIZE=64`.
-4. The function adds a new subproject to the main project. This subproject matches to a new external allowing to compile only one object without compiling all the others. The first argument is the name of the object (used as TARGET name) and the third argument are the sources. If you use more than one file, you can use `GLOB`, in this case, we compile all `.cpp` files inside `Sources`.
+1. The compiled externals will be output in the build folder. You can choose the folder name using: `cmake . -B build`.
+2. As of Pd 0.51-0, you can compile a "double precision" version of Pure Data.  
+   If you intend to use your externals in such an environment, you must also compile them with double precision by adding the following option: `-DPD_FLOATSIZE=64`.
+3. For externals with multiple source files, the list must be enclosed in double quotes:
+   ```cmake
+   file(GLOB EXTERNAL_SOURCES "${CMAKE_SOURCE_DIR}/Sources/*.cpp")
+   pd_add_external(myobj3 "${EXTERNAL_SOURCES}")
 
-```cmake
-file(GLOB EXTERNAL_SOURCES "${CMAKE_SOURCE_DIR}/Sources/*.cpp")
-pd_add_external(myobj3 ${EXTERNAL_SOURCES})
-```
 
 ## Compilation
 
