@@ -299,31 +299,34 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
 
     # Check if LINK_LIBRARIES is defined, if true set the flags
     if(DEFINED PD_EXTERNAL_LINK_LIBRARIES)
-        target_link_libraries(${OBJ_TARGET_NAME} PRIVATE ${PD_EXTERNAL_LINK_LIBRARIES})
+        target_link_libraries(${OBJ_TARGET_NAME} PUBLIC ${PD_EXTERNAL_LINK_LIBRARIES})
     endif()
-    target_include_directories(${OBJ_TARGET_NAME} PRIVATE ${PD_SOURCES_PATH}) # Add Pd Includes
+    target_include_directories(${OBJ_TARGET_NAME} PUBLIC ${PD_SOURCES_PATH}) # Add Pd Includes
+
+    # fix this 
     if(WIN32)
-        if(PD_FLOATSIZE EQUAL 64)
-            target_link_libraries(${OBJ_TARGET_NAME} PRIVATE "${PDBINDIR}/pd64.lib")
-        elseif(PD_FLOATSIZE EQUAL 32)
-            target_link_libraries(${OBJ_TARGET_NAME} PRIVATE "${PDBINDIR}/pd.lib")
+        if(MSVC)
+            if(PD_FLOATSIZE EQUAL 64)
+                target_link_libraries(${PROJECT_NAME} PUBLIC "${PDBINDIR}/pd64.lib")
+            else()
+                target_link_libraries(${PROJECT_NAME} PUBLIC "${PDBINDIR}/pd.lib")
+            endif()
+        elseif(MINGW)
+            if(PD_FLOATSIZE EQUAL 64)
+                target_link_options(${PROJECT_NAME} PUBLIC "-Wl,--enable-auto-import")
+                target_link_libraries(${PROJECT_NAME} PUBLIC "${PDBINDIR}/pd64.dll")
+            else()
+                target_link_options(${PROJECT_NAME} PUBLIC "-Wl,--enable-auto-import")
+                target_link_libraries(${PROJECT_NAME} PUBLIC "${PDBINDIR}/pd.dll")
+            endif()
         endif()
     elseif(APPLE)
-        set_target_properties(${OBJ_TARGET_NAME} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
+        set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
     endif()
 
-    if(WIN32)
-        if(PD_FLOATSIZE EQUAL 64)
-            target_link_libraries(${OBJ_TARGET_NAME} PRIVATE "${PDBINDIR}/pd64.lib")
-        elseif(PD_FLOATSIZE EQUAL 32)
-            target_link_libraries(${OBJ_TARGET_NAME} PRIVATE "${PDBINDIR}/pd.lib")
-        endif()
-    elseif(APPLE)
-        set_target_properties(${OBJ_TARGET_NAME} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
-    endif()
 
     if(PD_FLOATSIZE STREQUAL 64)
-        target_compile_definitions(${OBJ_TARGET_NAME} PRIVATE PD_FLOATSIZE=64)
+        target_compile_definitions(${OBJ_TARGET_NAME} PUBLIC PD_FLOATSIZE=64)
     endif()
 
     set_target_properties(${OBJ_TARGET_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY
@@ -373,7 +376,7 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
     set_target_properties(${PROJECT_NAME} PROPERTIES PREFIX "")
     set_property(TARGET ${PROJECT_NAME} PROPERTY EXTERNAL_DATA_FILES "")
 
-    target_include_directories(${PROJECT_NAME} PRIVATE ${PD_SOURCES_PATH})
+    target_include_directories(${PROJECT_NAME} PUBLIC ${PD_SOURCES_PATH})
     set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME ${EXTERNAL_NAME})
 
     # Defines the output path of the external.
@@ -393,9 +396,9 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
 
     if(WIN32)
         if(PD_FLOATSIZE EQUAL 64)
-            target_link_libraries(${PROJECT_NAME} PRIVATE "${PDBINDIR}/pd64.lib")
+            target_link_libraries(${PROJECT_NAME} PUBLIC "${PDBINDIR}/pd64.lib")
         elseif(PD_FLOATSIZE EQUAL 32)
-            target_link_libraries(${PROJECT_NAME} PRIVATE "${PDBINDIR}/pd.lib")
+            target_link_libraries(${PROJECT_NAME} PUBLIC "${PDBINDIR}/pd.lib")
         endif()
     elseif(APPLE)
         set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
@@ -407,7 +410,7 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
         PROPERTY SUFFIX) # set extension
 
     if(PD_FLOATSIZE STREQUAL 64)
-        target_compile_definitions(${PROJECT_NAME} PRIVATE PD_FLOATSIZE=64)
+        target_compile_definitions(${PROJECT_NAME} PUBLIC PD_FLOATSIZE=64)
     endif()
 
     pd_set_lib_ext(${PROJECT_NAME})
