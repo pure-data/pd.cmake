@@ -345,8 +345,10 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
                                                             ${CMAKE_CURRENT_BINARY_DIR})
     endforeach(OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES)
 
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}${PD_EXTENSION}
-            DESTINATION ${PDLIBDIR}/${PROJECT_NAME})
+    if (NOT PD_BUILD_STATIC_OBJECTS)
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}${PD_EXTENSION}
+                DESTINATION ${PDLIBDIR}/${PROJECT_NAME})
+    endif()
 
     if(WIN32 AND CMAKE_GENERATOR MATCHES "Visual Studio")
         string(FIND ${PD_EXTERNAL_NAME} "." NAME_HAS_DOT)
