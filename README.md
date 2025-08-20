@@ -19,7 +19,7 @@ To compile Pure Data externals using **`pd.cmake`**, you need [CMake](https://cm
 
 ```cmake
 set(PDCMAKE_FILE ${CMAKE_BINARY_DIR}/pd.cmake)
-set(PDCMAKE_VERSION "v0.2.0")
+set(PDCMAKE_VERSION "v0.2.2")
 if(NOT EXISTS "${PDCMAKE_FILE}")
     file(DOWNLOAD https://raw.githubusercontent.com/pure-data/pd.cmake/refs/tags/${PDCMAKE_VERSION}/pd.cmake ${PDCMAKE_FILE})
 endif()
