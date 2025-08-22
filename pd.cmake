@@ -126,7 +126,7 @@ if(NOT PD_SOURCES_PATH)
                     "<m_pd.h> not found in /Applications/Pd.app/Contents/Resources/src/, is Pd installed?"
             )
         endif()
-        message(STATUS "PD_SOURCES_PATH not set, using $PD_SOURCES_PATH}")
+        message(STATUS "PD_SOURCES_PATH not set, using ${PD_SOURCES_PATH}")
 
     elseif(UNIX AND NOT APPLE)
         if(NOT PD_SOURCES_PATH)
