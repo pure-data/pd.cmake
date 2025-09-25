@@ -177,52 +177,71 @@ function(pd_add_datafile OBJ_TARGET DATA_FILE)
 endfunction(pd_add_datafile)
 
 # ──────────────────────────────────────
+include(CheckCXXSourceCompiles)
+
 macro(pd_set_lib_ext OBJ_TARGET_NAME)
     if(EMSCRIPTEN)
         return()
     endif()
+
     if(PD_EXTENSION)
         set_target_properties(${OBJ_TARGET_NAME} PROPERTIES SUFFIX ".${PD_EXTENSION}")
-    else()
-        if(NOT (PD_FLOATSIZE EQUAL 64 OR PD_FLOATSIZE EQUAL 32))
-            message(FATAL_ERROR "PD_FLOATSIZE must be 32 or 64")
-        endif()
-
-        if(APPLE)
-            if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
-                set(PD_EXTENSION ".darwin-arm64-${PD_FLOATSIZE}.so")
-            else()
-                set(PD_EXTENSION ".darwin-amd64-${PD_FLOATSIZE}.so")
-            endif()
-
-        elseif(UNIX)
-            if(CMAKE_SIZEOF_VOID_P EQUAL 4) # 32-bit
-                if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
-                    set(PD_EXTENSION ".linux-arm-${PD_FLOATSIZE}.so")
-                endif()
-            else()
-                if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-                    set(PD_EXTENSION ".linux-arm64-${PD_FLOATSIZE}.so")
-                else()
-                    set(PD_EXTENSION ".linux-amd64-${PD_FLOATSIZE}.so")
-                endif()
-            endif()
-        elseif(WIN32)
-            if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-                set(PD_EXTENSION ".windows-i386-${PD_FLOATSIZE}.dll")
-            else()
-                set(PD_EXTENSION ".windows-amd64-${PD_FLOATSIZE}.dll")
-            endif()
-        endif()
-
-        if(NOT PD_EXTENSION)
-            message(
-                FATAL_ERROR
-                    "Not possible to determine the extension of the library, please set PD_EXTENSION"
-            )
-        endif()
-        set_target_properties(${OBJ_TARGET_NAME} PROPERTIES SUFFIX ${PD_EXTENSION})
+        return()
     endif()
+
+    if(NOT (PD_FLOATSIZE EQUAL 64 OR PD_FLOATSIZE EQUAL 32))
+        message(FATAL_ERROR "PD_FLOATSIZE must be 32 or 64")
+    endif()
+
+    if(APPLE)
+        if(HAVE_ARM64)
+            set(PD_EXTENSION ".darwin-arm64-${PD_FLOATSIZE}.so")
+        else()
+            set(PD_EXTENSION ".darwin-amd64-${PD_FLOATSIZE}.so")
+        endif()
+    elseif(UNIX)
+        # Detect ARM 32-bit
+        check_cxx_source_compiles(
+            "
+#ifdef __arm__
+int main() { return 0; }
+#else
+#error Not arm
+#endif
+"
+            HAVE_ARM32)
+        # Detect ARM64 / AArch64
+        check_cxx_source_compiles(
+            "
+#ifdef __aarch64__
+int main() { return 0; }
+#else
+#error Not aarch64
+#endif
+"
+            HAVE_ARM64)
+        if(HAVE_ARM32)
+            set(PD_EXTENSION ".linux-arm-${PD_FLOATSIZE}.so")
+        elseif(HAVE_ARM64)
+            set(PD_EXTENSION ".linux-aarch64-${PD_FLOATSIZE}.so")
+        else()
+            set(PD_EXTENSION ".linux-amd64-${PD_FLOATSIZE}.so")
+        endif()
+    elseif(WIN32)
+        if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+            set(PD_EXTENSION ".windows-i386-${PD_FLOATSIZE}.dll")
+        else()
+            set(PD_EXTENSION ".windows-amd64-${PD_FLOATSIZE}.dll")
+        endif()
+    endif()
+
+    if(NOT PD_EXTENSION)
+        message(
+            FATAL_ERROR
+                "Not possible to determine the extension of the library, please set PD_EXTENSION")
+    endif()
+
+    set_target_properties(${OBJ_TARGET_NAME} PROPERTIES SUFFIX ${PD_EXTENSION})
 endmacro(pd_set_lib_ext)
 
 # ──────────────────────────────────────
@@ -246,10 +265,10 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
     else()
         set(OBJ_TARGET_NAME ${PD_EXTERNAL_NAME})
     endif()
-    
+
     if(DEFINED PD_EXTERNAL_EXTERNAL_NAME)
-    		set(PD_EXTERNAL_NAME "${PD_EXTERNAL_EXTERNAL_NAME}")
-	endif()
+        set(PD_EXTERNAL_NAME "${PD_EXTERNAL_EXTERNAL_NAME}")
+    endif()
 
     if(EMSCRIPTEN OR PD_BUILD_STATIC_OBJECTS)
         add_library(${OBJ_TARGET_NAME} STATIC ${EXTERNAL_SOURCES})
@@ -282,7 +301,7 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
     endif()
     target_include_directories(${OBJ_TARGET_NAME} PUBLIC ${PD_SOURCES_PATH}) # Add Pd Includes
 
-    # fix this 
+    # fix this
     if(WIN32)
         if(MSVC)
             if(PD_FLOATSIZE EQUAL 64)
@@ -302,7 +321,6 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
     elseif(APPLE)
         set_target_properties(${OBJ_TARGET_NAME} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
     endif()
-
 
     if(PD_FLOATSIZE STREQUAL 64)
         target_compile_definitions(${OBJ_TARGET_NAME} PUBLIC PD_FLOATSIZE=64)
@@ -324,7 +342,7 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
                                                             ${CMAKE_CURRENT_BINARY_DIR})
     endforeach(OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES)
 
-    if (NOT PD_BUILD_STATIC_OBJECTS)
+    if(NOT PD_BUILD_STATIC_OBJECTS)
         install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}${PD_EXTENSION}
                 DESTINATION ${PDLIBDIR}/${PROJECT_NAME})
     endif()
