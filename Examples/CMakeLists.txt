@@ -27,11 +27,11 @@ pd_add_external(simple~ simple~/simple~.cpp
         TARGET simple_tilde)
 pd_add_datafile(simple_tilde simple~/simple~-help.pd)
 
-#╭──────────────────────────────────────╮
-#│ Obj 3 - Simple DSP obj with dynamic  │
-#│           library (fftw3f)           │
-#╰──────────────────────────────────────╯
-# NOTE: You need to have fftw3f installed in your system
-pd_add_external(myfft~ fft~/fft~.cpp TARGET myfft_tilde)
-pd_add_datafile(myfft_tilde fft~/fft~-help.pd)
-target_link_libraries(myfft_tilde PRIVATE fftw3f) # Link with fftw3f library
+# #╭──────────────────────────────────────╮
+# #│ Obj 3 - Simple DSP obj with dynamic  │
+# #│           library (fftw3f)           │
+# #╰──────────────────────────────────────╯
+# # NOTE: You need to have fftw3f installed in your system
+# pd_add_external(myfft~ fft~/fft~.cpp TARGET myfft_tilde)
+# pd_add_datafile(myfft_tilde fft~/fft~-help.pd)
+# target_link_libraries(myfft_tilde PRIVATE fftw3f) # Link with fftw3f library

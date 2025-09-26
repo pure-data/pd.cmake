@@ -1,82 +1,110 @@
-name: C/C++ CI
+---
+name: Compile PureData Object
 on:
-  workflow_dispatch:
   push:
-    branches: ["main"]
-  pull_request:
-    branches: ["main"]
+    branches: [main]
+#╭──────────────────────────────────────╮
+#│  Uncomment if you want to trigger a  │
+#│               release                │
+#╰──────────────────────────────────────╯
+  # workflow_dispatch:
+  #   inputs:
+  #     publish_release:
+  #       description: Publish a GitHub Release using LIBVERSION after build
+  #       required: false
+  #       type: boolean
+  #       default: false
 env:
-  LIBNAME: mysimplelib
-  LIBVERSION: 0.0
+  LIBNAME: examples
+  LIBVERSION: 0.0.0
+permissions:
+  contents: write
 jobs:
-  macos-universal-build:
-    runs-on: macos-latest
+  macos:
+    runs-on: ${{ matrix.machines }}
     strategy:
       matrix:
-        arch: [amd64, arm64]
         precision: [32, 64]
+        machines: [macos-13, macos-latest]
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
-      - name: Install PureData and Deps x86_64 Mac
-        if: ${{ matrix.arch == 'amd64' }}
-        run: |
-          arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-          arch -x86_64 /usr/local/bin/brew install pd
-          arch -x86_64 /usr/local/bin/brew install fftw
-      - name: Install PureData and Deps arm64 Mac
-        if: ${{ matrix.arch == 'arm64' }}
+      - name: Install PureData and Deps
         run: |
           brew install pd
-          brew install fftw
-      - name: Build Object for Arm
-        if: ${{ matrix.arch == 'arm64' }}
+      - name: Build
         run: |
-          export CPLUS_INCLUDE_PATH="$CPLUS_INCLUDE_PATH:/opt/homebrew/include/"
-          export LDFLAGS="-L/opt/homebrew/lib"
-          cmake . -B build -DCMAKE_OSX_ARCHITECTURES=arm64 -DPD_FLOATSIZE=${{ matrix.precision }}
-          cmake --build build -j $(sysctl -n hw.logicalcpu)
-      - name: Build Object for x86_64
-        if: ${{ matrix.arch == 'amd64' }}
-        run: |
-          export CPLUS_INCLUDE_PATH="$CPLUS_INCLUDE_PATH:/usr/local/include/"
-          export LDFLAGS="-L/usr/local/lib"
-          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_OSX_ARCHITECTURES=x86_64
-          cmake --build build -j $(sysctl -n hw.logicalcpu)
+          cmake . -B build -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel
+          cmake --install build
       - name: Upload Object
         uses: actions/upload-artifact@v4
         with:
-          name: ${{env.LIBNAME}}-macos-${{matrix.arch}}-${{matrix.precision}}
+          name: ${{env.LIBNAME}}-${{env.LIBVERSION}}-${{matrix.machines}}-pd${{matrix.precision}}
+          path: ${{env.LIBNAME}}
+  linux-build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64, arm, aarch64]
+        precision: [32, 64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+      - name: PureData Sources
+        run: |
+          sudo apt update
+          sudo add-apt-repository ppa:pure-data/pure-data -y
+          sudo apt install puredata -y
+      - name: Install aarch64 gcc
+        if: matrix.arch == 'aarch64'
+        run: |
+          sudo apt install gcc-aarch64-linux-gnu -y
+          sudo apt install g++-aarch64-linux-gnu -y
+          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
+      - name: Install arm gcc
+        if: matrix.arch == 'arm'
+        run: |
+          sudo apt install gcc-arm-linux-gnueabihf -y
+          sudo apt install g++-arm-linux-gnueabihf -y
+          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc -DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++ 
+      - name: Configure
+        if: matrix.arch == 'amd64'
+        run: |
+          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release
+      - name: Build Object
+        run: |
+          cmake --build build -- -j$(nproc)
+          cmake --install build
+      - name: Upload Object
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{env.LIBNAME}}-${{env.LIBVERSION}}-${{matrix.arch}}-pd${{matrix.precision}}
           path: ${{env.LIBNAME}}
   windows-build:
     runs-on: windows-latest
     strategy:
       matrix:
-        # TODO: msvc needs vcpkg support
-        compiler: [mingw] # , msvc ] # CHANGE: Choose between a compiler, you don't need boths
+        compiler: [mingw]
         arch: [amd64]
         precision: [32, 64]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      # ──────────────────────────────────────
-      - if: matrix.compiler == 'msvc'
-        name: Set up Visual Studio Build Tools
-        uses: microsoft/setup-msbuild@v2
-        # TODO: Add vcpkg support
-      # ──────────────────────────────────────
+        with:
+          submodules: recursive
+          fetch-depth: 0
       - if: matrix.compiler == 'mingw'
         name: Set up Msys2
         uses: msys2/setup-msys2@v2
         with:
           msystem: mingw64
-          install: make mingw-w64-x86_64-gcc mingw64/mingw-w64-x86_64-cmake mingw-w64-x86_64-fftw
-          # Add here dynamic libraries that you use (ex. fftw3, gsl, ...). 
-          # Search for the name in https://packages.msys2.org/queue
+          install: make mingw-w64-x86_64-gcc mingw64/mingw-w64-x86_64-cmake
           update: false
-      # ──────────────────────────────────────
       - name: Install winget
         uses: Cyberboss/install-winget@v1
       - name: Install PureData Float 32
@@ -87,99 +115,51 @@ jobs:
         if: matrix.precision == '64'
         run: |
           winget install -e --id MillerPuckette.Pd64 --accept-source-agreements
-      - name: Configure and build Visual Studio
-        if: matrix.compiler == 'msvc'
-        run: |
-          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }}
-          cmake --build build
       - name: Configure and build Mingw
         shell: msys2 {0}
         if: matrix.compiler == 'mingw'
         run: |
-          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }}
-          cmake --build build
+          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel
+          cmake --install build
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: ${{env.LIBNAME}}-f${{ matrix.precision }}-windows-${{ matrix.compiler }}
+          name: ${{env.LIBNAME}}-${{env.LIBVERSION}}-${{matrix.machines}}-pd${{matrix.precision}}
           path: ${{env.LIBNAME}}
-  linux-build:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [amd64, aarch64, arm]
-        precision: [32, 64]
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
-      - name: PureData Sources
-        run: |
-          sudo apt update
-          sudo add-apt-repository ppa:pure-data/pure-data -y
-          sudo apt install puredata -y
-          sudo apt install fftw3-dev -y
-          # Add here dynamic libraries that you use (ex. fftw3, gsl, ...).
-          # search for the name in https://packages.ubuntu.com/search
-      - name: Install aarch64 gcc
-        if: matrix.arch == 'aarch64'
-        run: |
-          sudo apt install gcc-aarch64-linux-gnu -y
-          sudo apt install g++-aarch64-linux-gnu -y
-      - name: Install arm gcc
-        if: matrix.arch == 'arm'
-        run: |
-          sudo apt install gcc-arm-linux-gnueabihf -y
-          sudo apt install g++-arm-linux-gnueabihf -y
-      - name: Build Object
-        if: matrix.arch == 'amd64'
-        run: |
-          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }}
-          cmake --build build -- -j$(nproc)
-      - name: Build Object
-        if: matrix.arch == 'aarch64'
-        run: |
-          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_PROCESSOR=aarch64
-          cmake --build build -- -j$(nproc)
-      - name: Build Object
-        if: matrix.arch == 'arm'
-        run: |
-          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_PROCESSOR=arm
-          cmake --build build -- -j$(nproc)
-      - name: Upload Object
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.LIBNAME }}-linux-${{matrix.arch}}-${{matrix.precision}}
-          path: ${{env.LIBNAME}}
-  package-artifacts:
-    needs: [macos-universal-build, windows-build, linux-build]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: '${{ env.LIBNAME }}-*'
-          path: artifacts
-          merge-multiple: true
-      - name: Clear tmp files
-        run: rm -f artifacts/*.pdb
-        # ──────────────────────────────────────
-      - name: Install Deken
-        continue-on-error: true
-        run: |
-          mkdir -p ${PWD}/package
-          docker run --rm --user $(id -u) \
-          --volume ${PWD}/artifacts:/artifacts \
-          --volume ${PWD}/package:/package \
-          registry.git.iem.at/pd/deken \
-          deken package /artifacts --output-dir /package -v ${{env.LIBVERSION}} -n ${{env.LIBNAME}}
-      - name: Clear Artifacts
-        uses: geekyeggo/delete-artifact@v5
-        with:
-          name: ${{ env.LIBNAME }}-*
-      - name: Upload Deken
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.LIBNAME }}-${{env.LIBVERSION}}
-          path: "./package/"
+#╭──────────────────────────────────────╮
+#│   Here an example to how publish a   │
+#│   release, uncomment the input or    │
+#│            remove the if             │
+#╰──────────────────────────────────────╯
+  # publish-release:
+  #   if: ${{ github.event.inputs.publish_release == 'true' }}
+  #   needs: [macos, linux-build, windows-build]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Download all artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         path: artifacts
+  #     - name: Create unified onnx directory and archive
+  #       run: |
+  #         set -e
+  #         TOPDIR="$LIBNAME"
+  #         mkdir -p "$TOPDIR"
+  #         for artifact_dir in artifacts/*; do
+  #           [ -d "$artifact_dir" ] || continue
+  #           cp -r "$artifact_dir/"* "$TOPDIR/"
+  #         done
+  #         ls -1 "$TOPDIR"
+  #         ZIP_NAME="${LIBNAME}-${LIBVERSION}-all-platforms.zip"
+  #         zip -r "$ZIP_NAME" "$TOPDIR"
+  #     - name: Create / Update GitHub Release
+  #       uses: softprops/action-gh-release@v2
+  #       with:
+  #         tag_name: v${{ env.LIBVERSION }}
+  #         name: ${{ env.LIBNAME }} v${{ env.LIBVERSION }}
+  #         target_commitish: ${{ github.sha }}
+  #         files: |
+  #           ${{ env.LIBNAME }}-${{ env.LIBVERSION }}-all-platforms.zip
+  #         draft: true
+  #         prerelease: false
