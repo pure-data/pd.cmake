@@ -194,7 +194,7 @@ macro(pd_set_lib_ext OBJ_TARGET_NAME)
     endif()
 
     if(APPLE)
-        if(HAVE_ARM64)
+        if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
             set(PD_EXTENSION ".darwin-arm64-${PD_FLOATSIZE}.so")
         else()
             set(PD_EXTENSION ".darwin-amd64-${PD_FLOATSIZE}.so")
