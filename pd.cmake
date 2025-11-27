@@ -3,6 +3,8 @@ if(${CMAKE_VERSION} VERSION_LESS "3.19")
     message(FATAL_ERROR "pd.cmake requires Cmake Version 3.19 or newer")
 endif()
 
+include(CheckCXXSourceCompiles)
+
 # ╭──────────────────────────────────────╮
 # │        Set pd.cmake variables        │
 # ╰──────────────────────────────────────╯
@@ -157,28 +159,39 @@ function(pd_add_datafile OBJ_TARGET DATA_FILE)
     endif()
 
     foreach(DATA_FILE ${DATA_FILE})
-        if(IS_DIRECTORY ${DATA_FILE})
-            if(PD_DATAFILE_DESTINATION)
-                install(DIRECTORY ${DATA_FILE}
-                        DESTINATION ${PDLIBDIR}/${PROJECT_NAME}/${PD_DATAFILE_DESTINATION})
-            else()
-                install(DIRECTORY ${DATA_FILE} DESTINATION ${PDLIBDIR}/${PROJECT_NAME})
-            endif()
+
+        # INSTALL (install-time)
+        if(PD_DATAFILE_DESTINATION)
+            set(_DEST "${PDLIBDIR}/${PROJECT_NAME}/${PD_DATAFILE_DESTINATION}")
         else()
-            if(PD_DATAFILE_DESTINATION)
-                install(FILES ${DATA_FILE}
-                        DESTINATION ${PDLIBDIR}/${PROJECT_NAME}/${PD_DATAFILE_DESTINATION})
+            set(_DEST "${PDLIBDIR}/${PROJECT_NAME}")
+        endif()
+
+        if(IS_DIRECTORY "${DATA_FILE}")
+            install(DIRECTORY "${DATA_FILE}" DESTINATION "${_DEST}")
+        else()
+            install(FILES "${DATA_FILE}" DESTINATION "${_DEST}")
+        endif()
+
+        # BUILD-TIME COPY
+        if(OUTPUT_PATH)
+            if(IS_DIRECTORY "${DATA_FILE}")
+                add_custom_command(
+                    TARGET ${OBJ_TARGET}
+                    POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_directory "${DATA_FILE}" "${OUTPUT_PATH}")
             else()
-                install(FILES ${DATA_FILE} DESTINATION ${PDLIBDIR}/${PROJECT_NAME})
+                add_custom_command(
+                    TARGET ${OBJ_TARGET}
+                    POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy "${DATA_FILE}" "${OUTPUT_PATH}")
             endif()
         endif()
-    endforeach()
 
-endfunction(pd_add_datafile)
+    endforeach()
+endfunction()
 
 # ──────────────────────────────────────
-include(CheckCXXSourceCompiles)
-
 macro(pd_set_lib_ext OBJ_TARGET_NAME)
     if(EMSCRIPTEN)
         return()
@@ -285,6 +298,21 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
             PROPERTY SUFFIX)
     endif()
 
+    if(PD_OUTPUT_PATH)
+        set_target_properties(
+            ${OBJ_TARGET_NAME}
+            PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PD_OUTPUT_PATH}"
+                       ARCHIVE_OUTPUT_DIRECTORY "${PD_OUTPUT_PATH}"
+                       RUNTIME_OUTPUT_DIRECTORY "${PD_OUTPUT_PATH}")
+    else()
+        set_target_properties(${OBJ_TARGET_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY
+                                                            ${CMAKE_CURRENT_BINARY_DIR})
+        set_target_properties(${OBJ_TARGET_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
+                                                            ${CMAKE_CURRENT_BINARY_DIR})
+        set_target_properties(${OBJ_TARGET_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY
+                                                            ${CMAKE_CURRENT_BINARY_DIR})
+    endif()
+
     # Check if CXX_FLAGS is defined, if true set the flags
     if(DEFINED PD_EXTERNAL_CXX_FLAGS)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${PD_EXTERNAL_CXX_FLAGS}")
@@ -326,21 +354,6 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
         target_compile_definitions(${OBJ_TARGET_NAME} PUBLIC PD_FLOATSIZE=64)
     endif()
 
-    set_target_properties(${OBJ_TARGET_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY
-                                                        ${CMAKE_CURRENT_BINARY_DIR})
-    set_target_properties(${OBJ_TARGET_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
-                                                        ${CMAKE_CURRENT_BINARY_DIR})
-    set_target_properties(${OBJ_TARGET_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY
-                                                        ${CMAKE_CURRENT_BINARY_DIR})
-    foreach(OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES})
-        string(TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG)
-        set_target_properties(${OBJ_TARGET_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG}
-                                                            ${CMAKE_CURRENT_BINARY_DIR})
-        set_target_properties(${OBJ_TARGET_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG}
-                                                            ${CMAKE_CURRENT_BINARY_DIR})
-        set_target_properties(${OBJ_TARGET_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY_${OUTPUTCONFIG}
-                                                            ${CMAKE_CURRENT_BINARY_DIR})
-    endforeach(OUTPUTCONFIG CMAKE_CONFIGURATION_TYPES)
 
     if(NOT PD_BUILD_STATIC_OBJECTS)
         install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}${PD_EXTENSION}
