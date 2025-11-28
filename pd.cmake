@@ -174,17 +174,19 @@ function(pd_add_datafile OBJ_TARGET DATA_FILE)
         endif()
 
         # BUILD-TIME COPY
-        if(OUTPUT_PATH)
+        if(PD_OUTPUT_PATH)
             if(IS_DIRECTORY "${DATA_FILE}")
                 add_custom_command(
                     TARGET ${OBJ_TARGET}
                     POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_directory "${DATA_FILE}" "${OUTPUT_PATH}")
+                    COMMAND ${CMAKE_COMMAND} -E copy_directory "${DATA_FILE}" "${PD_OUTPUT_PATH}")
             else()
                 add_custom_command(
                     TARGET ${OBJ_TARGET}
                     POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy "${DATA_FILE}" "${OUTPUT_PATH}")
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DATA_FILE}"
+                            "${PD_OUTPUT_PATH}")
+
             endif()
         endif()
 
@@ -353,7 +355,6 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
     if(PD_FLOATSIZE STREQUAL 64)
         target_compile_definitions(${OBJ_TARGET_NAME} PUBLIC PD_FLOATSIZE=64)
     endif()
-
 
     if(NOT PD_BUILD_STATIC_OBJECTS)
         install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}${PD_EXTENSION}
