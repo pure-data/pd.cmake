@@ -238,7 +238,7 @@ int main() { return 0; }
         if(HAVE_ARM32)
             set(PD_EXTENSION ".linux-arm-${PD_FLOATSIZE}.so")
         elseif(HAVE_ARM64)
-            set(PD_EXTENSION ".linux-aarch64-${PD_FLOATSIZE}.so")
+            set(PD_EXTENSION ".linux-arm64-${PD_FLOATSIZE}.so")
         else()
             set(PD_EXTENSION ".linux-amd64-${PD_FLOATSIZE}.so")
         endif()
