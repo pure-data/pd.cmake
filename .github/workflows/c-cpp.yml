@@ -25,7 +25,7 @@ jobs:
     strategy:
       matrix:
         precision: [32, 64]
-        machines: [macos-13, macos-latest]
+        machines: [macos-15-intel, macos-latest]
     steps:
       - uses: actions/checkout@v4
         with:
