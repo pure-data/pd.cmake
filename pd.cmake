@@ -209,13 +209,25 @@ macro(pd_set_lib_ext OBJ_TARGET_NAME)
     endif()
 
     if(APPLE)
-        if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64")
-            set(PD_EXTENSION ".darwin-arm64-${PD_FLOATSIZE}.so")
-        else()
+        if(CMAKE_OSX_ARCHITECTURES STREQUAL "")
+            set(CMAKE_OSX_ARCHITECTURES
+                "x86_64;arm64"
+                CACHE STRING "Target architectures" FORCE)
+            message(STATUS "Apple universal compilation")
+            set(PD_EXTENSION ".darwin-fat-${PD_FLOATSIZE}.so")
+        elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64")
+            message(STATUS "Apple x86_64 compilation")
             set(PD_EXTENSION ".darwin-amd64-${PD_FLOATSIZE}.so")
+        elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
+            message(STATUS "Apple arm64 compilation")
+            set(PD_EXTENSION ".darwin-arm64-${PD_FLOATSIZE}.so")
+        elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64;arm64" OR CMAKE_OSX_ARCHITECTURES STREQUAL
+                                                                  "arm64;x86_64")
+            message(STATUS "Apple universal compilation")
+            set(PD_EXTENSION ".darwin-fat-${PD_FLOATSIZE}.so")
         endif()
+
     elseif(UNIX)
-        # Detect ARM 32-bit
         check_cxx_source_compiles(
             "
 #ifdef __arm__
@@ -243,6 +255,7 @@ int main() { return 0; }
             set(PD_EXTENSION ".linux-amd64-${PD_FLOATSIZE}.so")
         endif()
     elseif(WIN32)
+        # TODO: Add arm
         if(CMAKE_SIZEOF_VOID_P EQUAL 4)
             set(PD_EXTENSION ".windows-i386-${PD_FLOATSIZE}.dll")
         else()
