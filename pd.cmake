@@ -295,6 +295,16 @@ function(calc_pd_extension)
   endif()
   message(STATUS "Detected '${os}' for system name '${CMAKE_SYSTEM_NAME}'")
 
+  if(APPLE AND (CMAKE_OSX_ARCHITECTURES STREQUAL ""))
+    # get rid of this: people should actively set CMAKE_OSX_ARCHITECTURES to their desired archs
+    # cf the [docs](https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_ARCHITECTURES.html):
+    # > The value of this variable should be set prior to the first project() [...].
+    # > It is intended to be set locally by the user creating a build tree.
+    set(CMAKE_OSX_ARCHITECTURES
+      "x86_64;arm64"
+      CACHE STRING "Target architectures" FORCE)
+  endif()
+
   # use the lowercase processor for the <cpu>
   string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" cpu)
 
@@ -325,27 +335,12 @@ function(calc_pd_extension)
   endif()
   message(STATUS "Detected '${cpu}' for system CPU '${CMAKE_SYSTEM_PROCESSOR}'")
 
-  if(APPLE)
-        if(CMAKE_OSX_ARCHITECTURES STREQUAL "")
-          # get rid of this: people should actively set CMAKE_OSX_ARCHITECTURES to their desired archs
-          # cf the [docs](https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_ARCHITECTURES.html):
-          # > The value of this variable should be set prior to the first project() [...].
-          # > It is intended to be set locally by the user creating a build tree.
-            set(CMAKE_OSX_ARCHITECTURES
-                "x86_64;arm64"
-                CACHE STRING "Target architectures" FORCE)
-        endif()
-        if(CMAKE_OSX_ARCHITECTURES MATCHES ".*;.*")
-            message(STATUS "Apple universal compilation")
-            set(cpu "fat")
-        endif()
-
-    elseif(WIN32)
-      # this used run run a CMAKE_SIZEOF_VOID_P to distinguish between i386 and amd64
-      # while this check is somewhat broken, (iirc) the CMAKE_SYSTEM_PROCESSOR is wrong as well
-      # (and always reports 'amd64')
-      message(WARNING "CPU detection on Windows is unreliable.")
-    endif()
+  if(WIN32)
+  # this used run run a CMAKE_SIZEOF_VOID_P to distinguish between i386 and amd64
+  # while this check is somewhat broken, (iirc) the CMAKE_SYSTEM_PROCESSOR is wrong as well
+  # (and always reports 'amd64')
+    message(WARNING "CPU detection on Windows is unreliable.")
+  endif()
 
   set(PD_EXTENSION "${os}-${cpu}-${PD_FLOATSIZE}.${ext}" PARENT_SCOPE)
 endfunction()
