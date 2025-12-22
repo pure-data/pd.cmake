@@ -65,17 +65,17 @@ jobs:
         run: |
           sudo apt install gcc-aarch64-linux-gnu -y
           sudo apt install g++-aarch64-linux-gnu -y
-          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
+          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
       - name: Install arm gcc
         if: matrix.arch == 'arm'
         run: |
           sudo apt install gcc-arm-linux-gnueabihf -y
           sudo apt install g++-arm-linux-gnueabihf -y
-          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc -DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++ 
+          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc -DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++ 
       - name: Configure
         if: matrix.arch == 'amd64'
         run: |
-          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release
+          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release
       - name: Build Object
         run: |
           cmake --build build -- -j$(nproc)
@@ -117,7 +117,7 @@ jobs:
         shell: msys2 {0}
         if: matrix.compiler == 'mingw'
         run: |
-          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release
+          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release
           cmake --build build --parallel
           cmake --install build
       - name: Upload
