@@ -273,23 +273,52 @@ function(calc_pd_extension)
     return()
   endif()
 
+  # no extension given, calculate a generic one: .<os>-<cpu>-<floatsize>.<ext>
+
+  # the extension suffix is '.dll' on Windows and '.so' on un*x (aka: everything else)
+  if(WIN32)
+    set(ext "dll")
+  else()
+    set(ext "so")
+  endif()
+
+  # use the lowercase system_name for the <os>
+  string(TOLOWER "${CMAKE_SYSTEM_NAME}" os)
+  # normalize names
+  if(os STREQUAL "msys")
+    set(os "windows")
+  elseif(os STREQUAL "mingw")
+    set(os "windows")
+  endif()
+  if(os STREQUAL "")
+    message(FATAL_ERROR "Not possible to determine OS name, please set CMAKE_SYSTEM_NAME")
+  endif()
+
+  # use the lowercase processor for the <cpu>
+  string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" cpu)
+  # normalize some names
+  if(cpu STREQUAL "x86_64")
+    set(cpu "amd64")
+  elseif(cpu MATCHES "i[0-9]86")
+    set(cpu "i386")
+  endif()
+  if(cpu STREQUAL "")
+    message(FATAL_ERROR "Not possible to determine CPU name, please set CMAKE_SYSTEM_PROCESSOR")
+  endif()
+
   if(APPLE)
         if(CMAKE_OSX_ARCHITECTURES STREQUAL "")
+          # get rid of this: people should actively set CMAKE_OSX_ARCHITECTURES to their desired archs
+          # cf the [docs](https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_ARCHITECTURES.html):
+          # > The value of this variable should be set prior to the first project() [...].
+          # > It is intended to be set locally by the user creating a build tree.
             set(CMAKE_OSX_ARCHITECTURES
                 "x86_64;arm64"
                 CACHE STRING "Target architectures" FORCE)
+        endif()
+        if(CMAKE_OSX_ARCHITECTURES MATCHES ".*;.*")
             message(STATUS "Apple universal compilation")
-            set(PD_EXTENSION "darwin-fat-${PD_FLOATSIZE}.so")
-        elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64")
-            message(STATUS "Apple x86_64 compilation")
-            set(PD_EXTENSION "darwin-amd64-${PD_FLOATSIZE}.so")
-        elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
-            message(STATUS "Apple arm64 compilation")
-            set(PD_EXTENSION "darwin-arm64-${PD_FLOATSIZE}.so")
-        elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64;arm64" OR CMAKE_OSX_ARCHITECTURES STREQUAL
-                                                                  "arm64;x86_64")
-            message(STATUS "Apple universal compilation")
-            set(PD_EXTENSION "darwin-fat-${PD_FLOATSIZE}.so")
+            set(cpu "fat")
         endif()
 
     elseif(UNIX)
@@ -313,21 +342,18 @@ int main() { return 0; }
 "
             HAVE_ARM64)
         if(HAVE_ARM32)
-            set(PD_EXTENSION "linux-arm-${PD_FLOATSIZE}.so")
+            set(cpu "arm")
         elseif(HAVE_ARM64)
-            set(PD_EXTENSION "linux-arm64-${PD_FLOATSIZE}.so")
-        else()
-            set(PD_EXTENSION "linux-amd64-${PD_FLOATSIZE}.so")
+            set(cpu "arm64")
         endif()
     elseif(WIN32)
-        # TODO: Add arm
-        if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-            set(PD_EXTENSION "windows-i386-${PD_FLOATSIZE}.dll")
-        else()
-            set(PD_EXTENSION "windows-amd64-${PD_FLOATSIZE}.dll")
-        endif()
+      # this used run run a CMAKE_SIZEOF_VOID_P to distinguish between i386 and amd64
+      # while this check is somewhat broken, (iirc) the CMAKE_SYSTEM_PROCESSOR is wrong as well
+      # (and always reports 'amd64')
+      message(WARNING "CPU detection on Windows is unreliable.")
     endif()
-    set(PD_EXTENSION "${PD_EXTENSION}" PARENT_SCOPE)
+
+  set(PD_EXTENSION "${os}-${cpu}-${PD_FLOATSIZE}.${ext}" PARENT_SCOPE)
 endfunction()
 
 function(strip_trailing_dot var input)
