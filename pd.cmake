@@ -293,6 +293,7 @@ function(calc_pd_extension)
   if(os STREQUAL "")
     message(FATAL_ERROR "Not possible to determine OS name, please set CMAKE_SYSTEM_NAME")
   endif()
+  message(STATUS "Detected '${os}' for system name '${CMAKE_SYSTEM_NAME}'")
 
   # use the lowercase processor for the <cpu>
   string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" cpu)
@@ -310,6 +311,7 @@ function(calc_pd_extension)
   if(cpu STREQUAL "")
     message(FATAL_ERROR "Not possible to determine CPU name, please set CMAKE_SYSTEM_PROCESSOR")
   endif()
+  message(STATUS "Detected '${cpu}' for system CPU '${CMAKE_SYSTEM_PROCESSOR}'")
 
   if(APPLE)
         if(CMAKE_OSX_ARCHITECTURES STREQUAL "")
