@@ -6,128 +6,6 @@ endif()
 include(CheckCXXSourceCompiles)
 
 # ╭──────────────────────────────────────╮
-# │        Set pd.cmake variables        │
-# ╰──────────────────────────────────────╯
-set(PDCMAKE_DIR
-    ${CMAKE_CURRENT_LIST_DIR}
-    CACHE STRING "PATH where is located pd.cmake file")
-
-set(PD_FLOATSIZE
-    32
-    CACHE STRING "the floatsize of Pd (32 or 64)")
-
-set(PD_SOURCES_PATH
-    ""
-    CACHE PATH "Path to Pd sources")
-
-set(PD_ENABLE_TILDE_TARGET_WARNING
-    ON
-    CACHE BOOL "Warning for Target with tilde")
-
-set(PD_INSTALL_LIBS
-    ON
-    CACHE BOOL "Install Pd Externals on PDLIBDIR")
-
-set(PD_BUILD_STATIC_OBJECTS
-    OFF
-    CACHE
-        BOOL
-        "Enable building static objects. Useful when using self-contained objects with libpd, such as in embedded systems or standalone applications."
-)
-
-# ╭──────────────────────────────────────╮
-# │         Get default PDLIBDIR         │
-# ╰──────────────────────────────────────╯
-if(APPLE)
-    set(PDLIBDIR
-        "~/Library/Pd"
-        CACHE PATH "Path where lib will be installed")
-elseif(UNIX)
-    set(PDLIBDIR
-        "/usr/local/lib/pd-externals"
-        CACHE PATH "Path where lib will be installed")
-elseif(WIN32)
-    set(PDLIBDIR
-        "$ENV{APPDATA}/Pd"
-        CACHE PATH "Path where lib will be installed")
-else()
-    message(FATAL_ERROR "Platform not supported")
-endif()
-
-if(PD_INSTALL_LIBS)
-    message(STATUS "Pd Install Libs Path: ${PDLIBDIR}")
-endif()
-
-# ╭──────────────────────────────────────╮
-# │   ToolChain for Raspberry (others)   │
-# ╰──────────────────────────────────────╯
-if(NOT PD_SOURCES_PATH)
-    if(WIN32 OR MINGW)
-        if(PD_FLOATSIZE EQUAL 64)
-            set(PD_SOURCES_PATH "C:/Program Files/Pd64/src")
-            if(NOT PDBINDIR)
-                set(PDBINDIR "C:/Program Files/Pd64/bin")
-            endif()
-        elseif(PD_FLOATSIZE EQUAL 32)
-            set(PD_SOURCES_PATH "C:/Program Files/Pd/src")
-            if(NOT PDBINDIR)
-                set(PDBINDIR "C:/Program Files/Pd/bin")
-            endif()
-        endif()
-        find_library(
-            PD_LIBRARY
-            NAMES pd
-            HINTS ${PDBINDIR})
-        find_path(PD_HEADER_PATH m_pd.h PATHS ${PD_SOURCES_PATH})
-        if(NOT PD_HEADER_PATH)
-            message(
-                FATAL_ERROR "<m_pd.h> not found in C:\\Program Files\\Pd\\src, is Pd installed?")
-        endif()
-
-    elseif(APPLE)
-        file(GLOB PD_INSTALLER "/Applications/Pd*.app")
-        if(PD_INSTALLER)
-            foreach(app ${PD_INSTALLER})
-                get_filename_component(PD_SOURCES_PATH "${app}/Contents/Resources/src/" ABSOLUTE)
-            endforeach()
-        else()
-            message(
-                FATAL_ERROR
-                    "PD_SOURCES_PATH not set and no Pd.app found in /Applications, is Pd installed?"
-            )
-        endif()
-
-        find_path(PD_HEADER_PATH m_pd.h PATHS ${PD_SOURCES_PATH})
-        if(NOT PD_HEADER_PATH)
-            message(
-                FATAL_ERROR
-                    "<m_pd.h> not found in /Applications/Pd.app/Contents/Resources/src/, is Pd installed?"
-            )
-        endif()
-        message(STATUS "PD_SOURCES_PATH not set, using ${PD_SOURCES_PATH}")
-
-    elseif(UNIX AND NOT APPLE)
-        if(NOT PD_SOURCES_PATH)
-            set(PD_SOURCES_PATH "/usr/include/pd/")
-            if(NOT EXISTS "${PD_SOURCES_PATH}")
-                set(PD_SOURCES_PATH "/usr/local/include/pd")
-            endif()
-        endif()
-        if(NOT PDBINDIR)
-            set(PDBINDIR ${PD_SOURCES_PATH}/../bin)
-        endif()
-        find_path(PD_HEADER_PATH m_pd.h PATHS ${PD_SOURCES_PATH})
-        if(NOT PD_HEADER_PATH AND NOT EMSCRIPTEN)
-            message(WARNING "<m_pd.h> not found in /usr/include/pd/, is Pd installed?")
-        endif()
-
-    else()
-        message(FATAL_ERROR "PD_SOURCES_PATH not set and no default path for the system")
-    endif()
-    set(PD_SOURCES_PATH ${PD_SOURCES_PATH})
-endif()
-
-# ╭──────────────────────────────────────╮
 # │                Macros                │
 # ╰──────────────────────────────────────╯
 macro(set_pd_external_path EXTERNAL_PATH)
@@ -444,3 +322,127 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
                     "${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}${PD_EXTENSION}")
 
 endfunction(add_pd_external)
+
+
+
+# ╭──────────────────────────────────────╮
+# │        Set pd.cmake variables        │
+# ╰──────────────────────────────────────╯
+set(PDCMAKE_DIR
+    ${CMAKE_CURRENT_LIST_DIR}
+    CACHE STRING "PATH where is located pd.cmake file")
+
+set(PD_FLOATSIZE
+    32
+    CACHE STRING "the floatsize of Pd (32 or 64)")
+
+set(PD_SOURCES_PATH
+    ""
+    CACHE PATH "Path to Pd sources")
+
+set(PD_ENABLE_TILDE_TARGET_WARNING
+    ON
+    CACHE BOOL "Warning for Target with tilde")
+
+set(PD_INSTALL_LIBS
+    ON
+    CACHE BOOL "Install Pd Externals on PDLIBDIR")
+
+set(PD_BUILD_STATIC_OBJECTS
+    OFF
+    CACHE
+        BOOL
+        "Enable building static objects. Useful when using self-contained objects with libpd, such as in embedded systems or standalone applications."
+)
+
+# ╭──────────────────────────────────────╮
+# │         Get default PDLIBDIR         │
+# ╰──────────────────────────────────────╯
+if(APPLE)
+    set(PDLIBDIR
+        "~/Library/Pd"
+        CACHE PATH "Path where lib will be installed")
+elseif(UNIX)
+    set(PDLIBDIR
+        "/usr/local/lib/pd-externals"
+        CACHE PATH "Path where lib will be installed")
+elseif(WIN32)
+    set(PDLIBDIR
+        "$ENV{APPDATA}/Pd"
+        CACHE PATH "Path where lib will be installed")
+else()
+    message(FATAL_ERROR "Platform not supported")
+endif()
+
+if(PD_INSTALL_LIBS)
+    message(STATUS "Pd Install Libs Path: ${PDLIBDIR}")
+endif()
+
+# ╭──────────────────────────────────────╮
+# │   ToolChain for Raspberry (others)   │
+# ╰──────────────────────────────────────╯
+if(NOT PD_SOURCES_PATH)
+    if(WIN32 OR MINGW)
+        if(PD_FLOATSIZE EQUAL 64)
+            set(PD_SOURCES_PATH "C:/Program Files/Pd64/src")
+            if(NOT PDBINDIR)
+                set(PDBINDIR "C:/Program Files/Pd64/bin")
+            endif()
+        elseif(PD_FLOATSIZE EQUAL 32)
+            set(PD_SOURCES_PATH "C:/Program Files/Pd/src")
+            if(NOT PDBINDIR)
+                set(PDBINDIR "C:/Program Files/Pd/bin")
+            endif()
+        endif()
+        find_library(
+            PD_LIBRARY
+            NAMES pd
+            HINTS ${PDBINDIR})
+        find_path(PD_HEADER_PATH m_pd.h PATHS ${PD_SOURCES_PATH})
+        if(NOT PD_HEADER_PATH)
+            message(
+                FATAL_ERROR "<m_pd.h> not found in C:\\Program Files\\Pd\\src, is Pd installed?")
+        endif()
+
+    elseif(APPLE)
+        file(GLOB PD_INSTALLER "/Applications/Pd*.app")
+        if(PD_INSTALLER)
+            foreach(app ${PD_INSTALLER})
+                get_filename_component(PD_SOURCES_PATH "${app}/Contents/Resources/src/" ABSOLUTE)
+            endforeach()
+        else()
+            message(
+                FATAL_ERROR
+                    "PD_SOURCES_PATH not set and no Pd.app found in /Applications, is Pd installed?"
+            )
+        endif()
+
+        find_path(PD_HEADER_PATH m_pd.h PATHS ${PD_SOURCES_PATH})
+        if(NOT PD_HEADER_PATH)
+            message(
+                FATAL_ERROR
+                    "<m_pd.h> not found in /Applications/Pd.app/Contents/Resources/src/, is Pd installed?"
+            )
+        endif()
+        message(STATUS "PD_SOURCES_PATH not set, using ${PD_SOURCES_PATH}")
+
+    elseif(UNIX AND NOT APPLE)
+        if(NOT PD_SOURCES_PATH)
+            set(PD_SOURCES_PATH "/usr/include/pd/")
+            if(NOT EXISTS "${PD_SOURCES_PATH}")
+                set(PD_SOURCES_PATH "/usr/local/include/pd")
+            endif()
+        endif()
+        if(NOT PDBINDIR)
+            set(PDBINDIR ${PD_SOURCES_PATH}/../bin)
+        endif()
+        find_path(PD_HEADER_PATH m_pd.h PATHS ${PD_SOURCES_PATH})
+        if(NOT PD_HEADER_PATH AND NOT EMSCRIPTEN)
+            message(WARNING "<m_pd.h> not found in /usr/include/pd/, is Pd installed?")
+        endif()
+
+    else()
+        message(FATAL_ERROR "PD_SOURCES_PATH not set and no default path for the system")
+    endif()
+    set(PD_SOURCES_PATH ${PD_SOURCES_PATH})
+endif()
