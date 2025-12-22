@@ -82,10 +82,6 @@ macro(pd_set_lib_ext OBJ_TARGET_NAME)
         return()
     endif()
 
-    if(NOT (PD_FLOATSIZE EQUAL 64 OR PD_FLOATSIZE EQUAL 32))
-        message(FATAL_ERROR "PD_FLOATSIZE must be 32 or 64")
-    endif()
-
     if(APPLE)
         if(CMAKE_OSX_ARCHITECTURES STREQUAL "")
             set(CMAKE_OSX_ARCHITECTURES
@@ -343,6 +339,10 @@ set(PDCMAKE_DIR
 set(PD_FLOATSIZE
     32
     CACHE STRING "the floatsize of Pd (32 or 64)")
+set_property(CACHE PD_FLOATSIZE PROPERTY STRINGS 32 64)
+if(NOT (PD_FLOATSIZE EQUAL 64 OR PD_FLOATSIZE EQUAL 32))
+  message(FATAL_ERROR "PD_FLOATSIZE must be 32 or 64")
+endif()
 
 set(PD_SOURCES_PATH
     ""
