@@ -147,7 +147,8 @@ int main() { return 0; }
                 "Not possible to determine the extension of the library, please set PD_EXTENSION")
     endif()
 
-    set_target_properties(${OBJ_TARGET_NAME} PROPERTIES SUFFIX ${PD_EXTENSION})
+    strip_trailing_dot(pdx "${PD_EXTENSION}")
+    set_target_properties(${OBJ_TARGET_NAME} PROPERTIES SUFFIX ".${pdx}")
 endmacro(pd_set_lib_ext)
 
 # ──────────────────────────────────────
@@ -247,8 +248,9 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
         target_compile_definitions(${OBJ_TARGET_NAME} PUBLIC PD_FLOATSIZE=64)
     endif()
 
+    strip_trailing_dot(pdx "${PD_EXTENSION}")
     if(NOT PD_BUILD_STATIC_OBJECTS)
-        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}${PD_EXTENSION}
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}.${pdx}
                 DESTINATION ${PDLIBDIR}/${PROJECT_NAME})
     endif()
 
@@ -318,11 +320,17 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
     endif()
 
     pd_set_lib_ext(${PROJECT_NAME})
+    strip_trailing_dot(pdx "${PD_EXTENSION}")
     pd_add_datafile(${PROJECT_NAME}
-                    "${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}${PD_EXTENSION}")
+                    "${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}.${pdx}")
 
 endfunction(add_pd_external)
 
+
+function(strip_trailing_dot var input)
+  string(REGEX REPLACE "^\\.(.*)$" "\\1" tmp "${input}")
+  set(${var} "${tmp}" PARENT_SCOPE)
+endfunction()
 
 
 # ╭──────────────────────────────────────╮
