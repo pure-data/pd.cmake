@@ -326,31 +326,6 @@ function(calc_pd_extension)
             set(cpu "fat")
         endif()
 
-    elseif(UNIX)
-        check_cxx_source_compiles(
-            "
-#ifdef __arm__
-int main() { return 0; }
-#else
-#error Not arm
-#endif
-"
-            HAVE_ARM32)
-        # Detect ARM64 / AArch64
-        check_cxx_source_compiles(
-            "
-#ifdef __aarch64__
-int main() { return 0; }
-#else
-#error Not aarch64
-#endif
-"
-            HAVE_ARM64)
-        if(HAVE_ARM32)
-            set(cpu "arm")
-        elseif(HAVE_ARM64)
-            set(cpu "arm64")
-        endif()
     elseif(WIN32)
       # this used run run a CMAKE_SIZEOF_VOID_P to distinguish between i386 and amd64
       # while this check is somewhat broken, (iirc) the CMAKE_SYSTEM_PROCESSOR is wrong as well
