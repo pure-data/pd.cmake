@@ -240,8 +240,8 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
         set_target_properties(${OBJ_TARGET_NAME} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
     endif()
 
-    if(PD_FLOATSIZE STREQUAL 64)
-        target_compile_definitions(${OBJ_TARGET_NAME} PUBLIC PD_FLOATSIZE=64)
+    if(NOT PD_FLOATSIZE EQUAL 32)
+        target_compile_definitions(${OBJ_TARGET_NAME} PUBLIC PD_FLOATSIZE=${PD_FLOATSIZE})
     endif()
 
     strip_trailing_dot(pdx "${PD_EXTENSION}")
