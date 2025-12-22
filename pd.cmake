@@ -77,66 +77,6 @@ macro(pd_set_lib_ext OBJ_TARGET_NAME)
         return()
     endif()
 
-    if(PD_EXTENSION)
-        set_target_properties(${OBJ_TARGET_NAME} PROPERTIES SUFFIX ".${PD_EXTENSION}")
-        return()
-    endif()
-
-    if(APPLE)
-        if(CMAKE_OSX_ARCHITECTURES STREQUAL "")
-            set(CMAKE_OSX_ARCHITECTURES
-                "x86_64;arm64"
-                CACHE STRING "Target architectures" FORCE)
-            message(STATUS "Apple universal compilation")
-            set(PD_EXTENSION ".darwin-fat-${PD_FLOATSIZE}.so")
-        elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64")
-            message(STATUS "Apple x86_64 compilation")
-            set(PD_EXTENSION ".darwin-amd64-${PD_FLOATSIZE}.so")
-        elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
-            message(STATUS "Apple arm64 compilation")
-            set(PD_EXTENSION ".darwin-arm64-${PD_FLOATSIZE}.so")
-        elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64;arm64" OR CMAKE_OSX_ARCHITECTURES STREQUAL
-                                                                  "arm64;x86_64")
-            message(STATUS "Apple universal compilation")
-            set(PD_EXTENSION ".darwin-fat-${PD_FLOATSIZE}.so")
-        endif()
-
-    elseif(UNIX)
-        check_cxx_source_compiles(
-            "
-#ifdef __arm__
-int main() { return 0; }
-#else
-#error Not arm
-#endif
-"
-            HAVE_ARM32)
-        # Detect ARM64 / AArch64
-        check_cxx_source_compiles(
-            "
-#ifdef __aarch64__
-int main() { return 0; }
-#else
-#error Not aarch64
-#endif
-"
-            HAVE_ARM64)
-        if(HAVE_ARM32)
-            set(PD_EXTENSION ".linux-arm-${PD_FLOATSIZE}.so")
-        elseif(HAVE_ARM64)
-            set(PD_EXTENSION ".linux-arm64-${PD_FLOATSIZE}.so")
-        else()
-            set(PD_EXTENSION ".linux-amd64-${PD_FLOATSIZE}.so")
-        endif()
-    elseif(WIN32)
-        # TODO: Add arm
-        if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-            set(PD_EXTENSION ".windows-i386-${PD_FLOATSIZE}.dll")
-        else()
-            set(PD_EXTENSION ".windows-amd64-${PD_FLOATSIZE}.dll")
-        endif()
-    endif()
-
     if(NOT PD_EXTENSION)
         message(
             FATAL_ERROR
@@ -322,6 +262,73 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
 
 endfunction(add_pd_external)
 
+function(calc_pd_extension)
+  if(EMSCRIPTEN)
+    # no extension required for emscripten
+    return()
+  endif()
+
+  if(PD_EXTENSION)
+    # already got an extension...
+    return()
+  endif()
+
+  if(APPLE)
+        if(CMAKE_OSX_ARCHITECTURES STREQUAL "")
+            set(CMAKE_OSX_ARCHITECTURES
+                "x86_64;arm64"
+                CACHE STRING "Target architectures" FORCE)
+            message(STATUS "Apple universal compilation")
+            set(PD_EXTENSION "darwin-fat-${PD_FLOATSIZE}.so")
+        elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64")
+            message(STATUS "Apple x86_64 compilation")
+            set(PD_EXTENSION "darwin-amd64-${PD_FLOATSIZE}.so")
+        elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
+            message(STATUS "Apple arm64 compilation")
+            set(PD_EXTENSION "darwin-arm64-${PD_FLOATSIZE}.so")
+        elseif(CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64;arm64" OR CMAKE_OSX_ARCHITECTURES STREQUAL
+                                                                  "arm64;x86_64")
+            message(STATUS "Apple universal compilation")
+            set(PD_EXTENSION "darwin-fat-${PD_FLOATSIZE}.so")
+        endif()
+
+    elseif(UNIX)
+        check_cxx_source_compiles(
+            "
+#ifdef __arm__
+int main() { return 0; }
+#else
+#error Not arm
+#endif
+"
+            HAVE_ARM32)
+        # Detect ARM64 / AArch64
+        check_cxx_source_compiles(
+            "
+#ifdef __aarch64__
+int main() { return 0; }
+#else
+#error Not aarch64
+#endif
+"
+            HAVE_ARM64)
+        if(HAVE_ARM32)
+            set(PD_EXTENSION "linux-arm-${PD_FLOATSIZE}.so")
+        elseif(HAVE_ARM64)
+            set(PD_EXTENSION "linux-arm64-${PD_FLOATSIZE}.so")
+        else()
+            set(PD_EXTENSION "linux-amd64-${PD_FLOATSIZE}.so")
+        endif()
+    elseif(WIN32)
+        # TODO: Add arm
+        if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+            set(PD_EXTENSION "windows-i386-${PD_FLOATSIZE}.dll")
+        else()
+            set(PD_EXTENSION "windows-amd64-${PD_FLOATSIZE}.dll")
+        endif()
+    endif()
+    set(PD_EXTENSION "${PD_EXTENSION}" PARENT_SCOPE)
+endfunction()
 
 function(strip_trailing_dot var input)
   string(REGEX REPLACE "^\\.(.*)$" "\\1" tmp "${input}")
@@ -343,6 +350,12 @@ set_property(CACHE PD_FLOATSIZE PROPERTY STRINGS 32 64)
 if(NOT (PD_FLOATSIZE EQUAL 64 OR PD_FLOATSIZE EQUAL 32))
   message(FATAL_ERROR "PD_FLOATSIZE must be 32 or 64")
 endif()
+
+calc_pd_extension()
+set(PD_EXTENSION
+  "${PD_EXTENSION}"
+  CACHE STRING "Pd extension (e.g. 'pd_linux')")
+
 
 set(PD_SOURCES_PATH
     ""
