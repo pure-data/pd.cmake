@@ -297,6 +297,18 @@ function(calc_pd_extension)
 
   # use the lowercase processor for the <cpu>
   string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" cpu)
+
+  # OS specific overrides
+  if(APPLE AND (NOT CMAKE_OSX_ARCHITECTURES STREQUAL ""))
+    if(CMAKE_OSX_ARCHITECTURES MATCHES ".*;.*")
+      set(cpu "fat")
+      message(STATUS "Apple universal compilation")
+    else()
+      set(cpu ${CMAKE_OSX_ARCHITECTURES})
+      message(STATUS "Apple ${cpu} compilation")
+    endif()
+  endif()
+
   # normalize some names
   if(cpu STREQUAL "x86_64")
     set(cpu "amd64")
