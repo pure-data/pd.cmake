@@ -57,20 +57,20 @@ jobs:
           fetch-depth: 1
       - name: PureData Sources
         run: |
-          sudo apt update
+          sudo apt-get update
           sudo add-apt-repository ppa:pure-data/pure-data -y
-          sudo apt install puredata -y
+          sudo apt-get install puredata -y
       - name: Install aarch64 gcc
         if: matrix.arch == 'aarch64'
         run: |
-          sudo apt install gcc-aarch64-linux-gnu -y
-          sudo apt install g++-aarch64-linux-gnu -y
+          sudo apt-get install gcc-aarch64-linux-gnu -y
+          sudo apt-get install g++-aarch64-linux-gnu -y
           cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
       - name: Install arm gcc
         if: matrix.arch == 'arm'
         run: |
-          sudo apt install gcc-arm-linux-gnueabihf -y
-          sudo apt install g++-arm-linux-gnueabihf -y
+          sudo apt-get install gcc-arm-linux-gnueabihf -y
+          sudo apt-get install g++-arm-linux-gnueabihf -y
           cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc -DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++ 
       - name: Configure
         if: matrix.arch == 'amd64'
