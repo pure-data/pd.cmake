@@ -60,22 +60,20 @@ jobs:
           sudo apt-get update
           sudo add-apt-repository ppa:pure-data/pure-data -y
           sudo apt-get install puredata -y
-      - name: Install aarch64 gcc
-        if: matrix.arch == 'aarch64'
+      - name: Install compiler
+        id: compiler
         run: |
-          sudo apt-get install gcc-aarch64-linux-gnu -y
-          sudo apt-get install g++-aarch64-linux-gnu -y
-          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
-      - name: Install arm gcc
-        if: matrix.arch == 'arm'
-        run: |
-          sudo apt-get install gcc-arm-linux-gnueabihf -y
-          sudo apt-get install g++-arm-linux-gnueabihf -y
-          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc -DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++ 
+          arch=""
+          test "${{ matrix.arch }}" != "aarch64" || arch="aarch64-linux-gnu"
+          test "${{ matrix.arch }}" != "arm" || arch="arm-linux-gnueabihf"
+          if test -n "${arch}"; then
+            sudo apt-get install -y g++-${arch}
+            echo "arch=${arch}" >> $GITHUB_OUTPUT
+          fi
       - name: Configure
-        if: matrix.arch == 'amd64'
         run: |
-          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release
+          arch="${{ steps.compiler.outputs.arch }}"
+          cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release ${arch:+-DCMAKE_C_COMPILER=${arch}-gcc -DCMAKE_CXX_COMPILER=${arch}-g++}
       - name: Build Object
         run: |
           cmake --build build -- -j$(nproc)
