@@ -317,6 +317,12 @@ function(calc_pd_extension)
       set(cpu ${CMAKE_OSX_ARCHITECTURES})
       message(STATUS "Apple ${cpu} compilation")
     endif()
+  elseif(WIN32 AND (cpu MATCHES "(x86_64|amd64)"))
+    if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+      # urgh. this shouldn't be needed
+      message(WARNING "Detected CPU ${CMAKE_SYSTEM_PROCESSOR} with a ${CMAKE_SIZEOF_VOID_P}byte pointer...fixing")
+      set(cpu "i386")
+    endif()
   endif()
 
   # normalize some names
@@ -334,13 +340,6 @@ function(calc_pd_extension)
     message(FATAL_ERROR "Not possible to determine CPU name, please set CMAKE_SYSTEM_PROCESSOR")
   endif()
   message(STATUS "Detected '${cpu}' for system CPU '${CMAKE_SYSTEM_PROCESSOR}'")
-
-  if(WIN32)
-  # this used run run a CMAKE_SIZEOF_VOID_P to distinguish between i386 and amd64
-  # while this check is somewhat broken, (iirc) the CMAKE_SYSTEM_PROCESSOR is wrong as well
-  # (and always reports 'amd64')
-    message(WARNING "CPU detection on Windows is unreliable.")
-  endif()
 
   set(PD_EXTENSION "${os}-${cpu}-${PD_FLOATSIZE}.${ext}" PARENT_SCOPE)
 endfunction()
