@@ -36,7 +36,7 @@ jobs:
           brew install pd
       - name: Build
         run: |
-          cmake . -B build -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
+          cmake . -B build -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DPD_FLOATSIZE=${{ matrix.precision }}
           cmake --build build --parallel
           cmake --install build
       - name: Upload Object
