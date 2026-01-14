@@ -42,7 +42,7 @@ jobs:
       - name: Upload Object
         uses: actions/upload-artifact@v4
         with:
-          name: ${{env.LIBNAME}}-${{env.LIBVERSION}}-${{matrix.machines}}-pd${{matrix.precision}}
+          name: ${{env.LIBNAME}}-${{env.LIBVERSION}}-${{matrix.machines}}-universal-pd${{matrix.precision}}
           path: ${{env.LIBNAME}}
   linux-build:
     runs-on: ubuntu-latest
@@ -81,7 +81,7 @@ jobs:
       - name: Upload Object
         uses: actions/upload-artifact@v4
         with:
-          name: ${{env.LIBNAME}}-${{env.LIBVERSION}}-${{matrix.arch}}-pd${{matrix.precision}}
+          name: ${{env.LIBNAME}}-${{env.LIBVERSION}}-ubuntu-latest-${{matrix.arch}}-pd${{matrix.precision}}
           path: ${{env.LIBNAME}}
   windows-build:
     runs-on: windows-latest
@@ -121,7 +121,7 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: ${{env.LIBNAME}}-${{env.LIBVERSION}}-${{matrix.machines}}-pd${{matrix.precision}}
+          name: ${{env.LIBNAME}}-${{env.LIBVERSION}}-windows-latest-${{matrix.arch}}-pd${{matrix.precision}}
           path: ${{env.LIBNAME}}
 #╭──────────────────────────────────────╮
 #│   Here an example to how publish a   │
