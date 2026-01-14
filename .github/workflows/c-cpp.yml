@@ -25,7 +25,7 @@ jobs:
     strategy:
       matrix:
         precision: [32, 64]
-        machines: [macos-15-intel, macos-latest]
+        machines: [macos-latest]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,7 +36,7 @@ jobs:
           brew install pd
       - name: Build
         run: |
-          cmake . -B build -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release
+          cmake . -B build -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64"
           cmake --build build --parallel
           cmake --install build
       - name: Upload Object
