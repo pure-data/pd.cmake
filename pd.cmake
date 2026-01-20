@@ -11,7 +11,7 @@ include(CheckCXXSourceCompiles)
 macro(set_pd_external_path EXTERNAL_PATH)
     message(
         DEPRECATION
-            "set_pd_external_path was removed, you can set PD_LIB_DIR and run cmake with '-DPD_INSTALL_LIBS=ON' instead"
+            "set_pd_external_path was removed, you can set PD_OUTPUT_PATH instead"
     )
 endmacro(set_pd_external_path)
 
