@@ -11,7 +11,7 @@ include(CheckCXXSourceCompiles)
 macro(set_pd_external_path EXTERNAL_PATH)
     message(
         DEPRECATION
-            "set_pd_external_path was removed, you can set PDLIBDIR and run cmake with '-DPD_INSTALL_LIBS=ON' instead"
+            "set_pd_external_path was removed, you can set PD_LIB_DIR and run cmake with '-DPD_INSTALL_LIBS=ON' instead"
     )
 endmacro(set_pd_external_path)
 
@@ -19,6 +19,12 @@ endmacro(set_pd_external_path)
 macro(set_pd_sources PD_SOURCES)
     message(DEPRECATION "set_pd_sources is deprecated, use pd_set_sources instead")
 endmacro(set_pd_sources)
+
+# ──────────────────────────────────────
+if(DEFINED PDLIBDIR)
+    message(DEPRECATION "PDLIBDIR is deprecated, use PD_LIB_DIR instead")
+    set(PD_LIB_DIR ${PDLIBDIR})
+endif()
 
 macro(pd_set_sources PD_SOURCES)
     set(PD_SOURCES_PATH ${PD_SOURCES})
@@ -40,9 +46,9 @@ function(pd_add_datafile OBJ_TARGET DATA_FILE)
 
         # INSTALL (install-time)
         if(PD_DATAFILE_DESTINATION)
-            set(_DEST "${PDLIBDIR}/${PROJECT_NAME}/${PD_DATAFILE_DESTINATION}")
+            set(_DEST "${PD_LIB_DIR}/${PROJECT_NAME}/${PD_DATAFILE_DESTINATION}")
         else()
-            set(_DEST "${PDLIBDIR}/${PROJECT_NAME}")
+            set(_DEST "${PD_LIB_DIR}/${PROJECT_NAME}")
         endif()
 
         if(IS_DIRECTORY "${DATA_FILE}")
@@ -187,7 +193,7 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
     strip_trailing_dot(pdx "${PD_EXTENSION}")
     if(NOT PD_BUILD_STATIC_OBJECTS)
         install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}.${pdx}
-                DESTINATION ${PDLIBDIR}/${PROJECT_NAME})
+                DESTINATION ${PD_LIB_DIR}/${PROJECT_NAME})
     endif()
 
     if(MSVC)
@@ -381,7 +387,7 @@ set(PD_ENABLE_TILDE_TARGET_WARNING
 
 set(PD_INSTALL_LIBS
     ON
-    CACHE BOOL "Install Pd Externals on PDLIBDIR")
+    CACHE BOOL "Install Pd Externals on PD_LIB_DIR")
 
 set(PD_BUILD_STATIC_OBJECTS
     OFF
@@ -391,18 +397,18 @@ set(PD_BUILD_STATIC_OBJECTS
 )
 
 # ╭──────────────────────────────────────╮
-# │         Get default PDLIBDIR         │
+# │         Get default PD_LIB_DIR       │
 # ╰──────────────────────────────────────╯
 if(APPLE)
-    set(PDLIBDIR
+    set(PD_LIB_DIR
         "~/Library/Pd"
         CACHE PATH "Path where lib will be installed")
 elseif(UNIX)
-    set(PDLIBDIR
+    set(PD_LIB_DIR
         "/usr/local/lib/pd-externals"
         CACHE PATH "Path where lib will be installed")
 elseif(WIN32)
-    set(PDLIBDIR
+    set(PD_LIB_DIR
         "$ENV{APPDATA}/Pd"
         CACHE PATH "Path where lib will be installed")
 else()
@@ -410,7 +416,7 @@ else()
 endif()
 
 if(PD_INSTALL_LIBS)
-    message(STATUS "Pd Install Libs Path: ${PDLIBDIR}")
+    message(STATUS "Pd Install Libs Path: ${PD_LIB_DIR}")
 endif()
 
 # ╭──────────────────────────────────────╮
