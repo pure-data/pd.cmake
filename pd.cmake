@@ -186,8 +186,7 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
 
     strip_trailing_dot(pdx "${PD_EXTENSION}")
     if(NOT PD_BUILD_STATIC_OBJECTS)
-        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}.${pdx}
-                DESTINATION ${PDLIBDIR}/${PROJECT_NAME})
+        pd_add_datafile({$OBJ_TARGET_NAME} ${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}.${pdx})
     endif()
 
     if(MSVC)
@@ -257,98 +256,103 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
 
     pd_set_lib_ext(${PROJECT_NAME})
     strip_trailing_dot(pdx "${PD_EXTENSION}")
-    pd_add_datafile(${PROJECT_NAME}
-                    "${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}.${pdx}")
+    pd_add_datafile(${PROJECT_NAME} "${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}.${pdx}")
 
 endfunction(add_pd_external)
 
 function(calc_pd_extension)
-  if(EMSCRIPTEN)
-    # no extension required for emscripten
-    return()
-  endif()
+    if(EMSCRIPTEN)
+        # no extension required for emscripten
+        return()
+    endif()
 
-  if(PD_EXTENSION)
-    # already got an extension...
-    return()
-  endif()
+    if(PD_EXTENSION)
+        # already got an extension...
+        return()
+    endif()
 
-  # no extension given, calculate a generic one: .<os>-<cpu>-<floatsize>.<ext>
+    # no extension given, calculate a generic one: .<os>-<cpu>-<floatsize>.<ext>
 
-  # the extension suffix is '.dll' on Windows and '.so' on un*x (aka: everything else)
-  if(WIN32)
-    set(ext "dll")
-  else()
-    set(ext "so")
-  endif()
-
-  # use the lowercase system_name for the <os>
-  string(TOLOWER "${CMAKE_SYSTEM_NAME}" os)
-  # normalize names
-  if(os STREQUAL "msys")
-    set(os "windows")
-  elseif(os STREQUAL "mingw")
-    set(os "windows")
-  endif()
-  if(os STREQUAL "")
-    message(FATAL_ERROR "Not possible to determine OS name, please set CMAKE_SYSTEM_NAME")
-  endif()
-  message(STATUS "Detected '${os}' for system name '${CMAKE_SYSTEM_NAME}'")
-
-  if(APPLE AND (CMAKE_OSX_ARCHITECTURES STREQUAL ""))
-    # get rid of this: people should actively set CMAKE_OSX_ARCHITECTURES to their desired archs
-    # cf the [docs](https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_ARCHITECTURES.html):
-    # > The value of this variable should be set prior to the first project() [...].
-    # > It is intended to be set locally by the user creating a build tree.
-    set(CMAKE_OSX_ARCHITECTURES
-      "x86_64;arm64"
-      CACHE STRING "Target architectures" FORCE)
-  endif()
-
-  # use the lowercase processor for the <cpu>
-  string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" cpu)
-
-  # OS specific overrides
-  if(APPLE AND (NOT CMAKE_OSX_ARCHITECTURES STREQUAL ""))
-    if(CMAKE_OSX_ARCHITECTURES MATCHES ".*;.*")
-      set(cpu "fat")
-      message(STATUS "Apple universal compilation")
+    # the extension suffix is '.dll' on Windows and '.so' on un*x (aka: everything else)
+    if(WIN32)
+        set(ext "dll")
     else()
-      set(cpu ${CMAKE_OSX_ARCHITECTURES})
-      message(STATUS "Apple ${cpu} compilation")
+        set(ext "so")
     endif()
-  elseif(WIN32 AND (cpu MATCHES "(x86_64|amd64)"))
-    if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-      # urgh. this shouldn't be needed
-      message(WARNING "Detected CPU ${CMAKE_SYSTEM_PROCESSOR} with a ${CMAKE_SIZEOF_VOID_P}byte pointer...fixing")
-      set(cpu "i386")
+
+    # use the lowercase system_name for the <os>
+    string(TOLOWER "${CMAKE_SYSTEM_NAME}" os)
+    # normalize names
+    if(os STREQUAL "msys")
+        set(os "windows")
+    elseif(os STREQUAL "mingw")
+        set(os "windows")
     endif()
-  endif()
+    if(os STREQUAL "")
+        message(FATAL_ERROR "Not possible to determine OS name, please set CMAKE_SYSTEM_NAME")
+    endif()
+    message(STATUS "Detected '${os}' for system name '${CMAKE_SYSTEM_NAME}'")
 
-  # normalize some names
-  if(cpu STREQUAL "x86_64")
-    set(cpu "amd64")
-  elseif(cpu MATCHES "i[0-9]86")
-    set(cpu "i386")
-  elseif(cpu STREQUAL "aarch64")
-    set(cpu "arm64")
-  elseif(cpu MATCHES "arm.*")
-    set(cpu "arm")
-  endif()
+    if(APPLE AND (CMAKE_OSX_ARCHITECTURES STREQUAL ""))
+        # get rid of this: people should actively set CMAKE_OSX_ARCHITECTURES to their desired archs
+        # cf the [docs](https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_ARCHITECTURES.html):
+        # > The value of this variable should be set prior to the first project() [...]. > It is
+        # intended to be set locally by the user creating a build tree.
+        set(CMAKE_OSX_ARCHITECTURES
+            "x86_64;arm64"
+            CACHE STRING "Target architectures" FORCE)
+    endif()
 
-  if(cpu STREQUAL "")
-    message(FATAL_ERROR "Not possible to determine CPU name, please set CMAKE_SYSTEM_PROCESSOR")
-  endif()
-  message(STATUS "Detected '${cpu}' for system CPU '${CMAKE_SYSTEM_PROCESSOR}'")
+    # use the lowercase processor for the <cpu>
+    string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" cpu)
 
-  set(PD_EXTENSION "${os}-${cpu}-${PD_FLOATSIZE}.${ext}" PARENT_SCOPE)
+    # OS specific overrides
+    if(APPLE AND (NOT CMAKE_OSX_ARCHITECTURES STREQUAL ""))
+        if(CMAKE_OSX_ARCHITECTURES MATCHES ".*;.*")
+            set(cpu "fat")
+            message(STATUS "Apple universal compilation")
+        else()
+            set(cpu ${CMAKE_OSX_ARCHITECTURES})
+            message(STATUS "Apple ${cpu} compilation")
+        endif()
+    elseif(WIN32 AND (cpu MATCHES "(x86_64|amd64)"))
+        if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+            # urgh. this shouldn't be needed
+            message(
+                WARNING
+                    "Detected CPU ${CMAKE_SYSTEM_PROCESSOR} with a ${CMAKE_SIZEOF_VOID_P}byte pointer...fixing"
+            )
+            set(cpu "i386")
+        endif()
+    endif()
+
+    # normalize some names
+    if(cpu STREQUAL "x86_64")
+        set(cpu "amd64")
+    elseif(cpu MATCHES "i[0-9]86")
+        set(cpu "i386")
+    elseif(cpu STREQUAL "aarch64")
+        set(cpu "arm64")
+    elseif(cpu MATCHES "arm.*")
+        set(cpu "arm")
+    endif()
+
+    if(cpu STREQUAL "")
+        message(FATAL_ERROR "Not possible to determine CPU name, please set CMAKE_SYSTEM_PROCESSOR")
+    endif()
+    message(STATUS "Detected '${cpu}' for system CPU '${CMAKE_SYSTEM_PROCESSOR}'")
+
+    set(PD_EXTENSION
+        "${os}-${cpu}-${PD_FLOATSIZE}.${ext}"
+        PARENT_SCOPE)
 endfunction()
 
 function(strip_trailing_dot var input)
-  string(REGEX REPLACE "^\\.(.*)$" "\\1" tmp "${input}")
-  set(${var} "${tmp}" PARENT_SCOPE)
+    string(REGEX REPLACE "^\\.(.*)$" "\\1" tmp "${input}")
+    set(${var}
+        "${tmp}"
+        PARENT_SCOPE)
 endfunction()
-
 
 # ╭──────────────────────────────────────╮
 # │        Set pd.cmake variables        │
@@ -362,14 +366,13 @@ set(PD_FLOATSIZE
     CACHE STRING "the floatsize of Pd (32 or 64)")
 set_property(CACHE PD_FLOATSIZE PROPERTY STRINGS 32 64)
 if(NOT (PD_FLOATSIZE EQUAL 64 OR PD_FLOATSIZE EQUAL 32))
-  message(FATAL_ERROR "PD_FLOATSIZE must be 32 or 64")
+    message(FATAL_ERROR "PD_FLOATSIZE must be 32 or 64")
 endif()
 
 calc_pd_extension()
 set(PD_EXTENSION
-  "${PD_EXTENSION}"
-  CACHE STRING "Pd extension (e.g. 'pd_linux')")
-
+    "${PD_EXTENSION}"
+    CACHE STRING "Pd extension (e.g. 'pd_linux')")
 
 set(PD_SOURCES_PATH
     ""
