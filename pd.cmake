@@ -28,10 +28,11 @@ endmacro(pd_set_sources)
 # │              Functions               │
 # ╰──────────────────────────────────────╯
 function(pd_add_datafile OBJ_TARGET DATA_FILE)
-    set(BOOLEAN_ARGS) # No args for now
-    set(ONE_ARGS) # Define optional arg for TARGET
+    set(BOOLEAN_ARGS)
+    set(ONE_ARGS)
     set(MULTI_ARGS DESTINATION IGNORE_DIR)
     cmake_parse_arguments(PD_DATAFILE "${BOOLEAN_ARGS}" "${ONE_ARGS}" "${MULTI_ARGS}" ${ARGN})
+
     if(${OBJ_TARGET} MATCHES "~$")
         string(REGEX REPLACE "~$" "_tilde" OBJ_TARGET ${OBJ_TARGET})
     endif()
@@ -53,6 +54,13 @@ function(pd_add_datafile OBJ_TARGET DATA_FILE)
 
         # BUILD-TIME COPY
         if(PD_OUTPUT_PATH)
+
+            # Ensure output directory exists
+            add_custom_command(
+                TARGET ${OBJ_TARGET}
+                POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${PD_OUTPUT_PATH}")
+
             if(IS_DIRECTORY "${DATA_FILE}")
                 add_custom_command(
                     TARGET ${OBJ_TARGET}
@@ -63,8 +71,7 @@ function(pd_add_datafile OBJ_TARGET DATA_FILE)
                     TARGET ${OBJ_TARGET}
                     POST_BUILD
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DATA_FILE}"
-                            "${PD_OUTPUT_PATH}")
-
+                            "${PD_OUTPUT_PATH}/")
             endif()
         endif()
 
