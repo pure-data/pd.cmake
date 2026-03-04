@@ -11,7 +11,7 @@ include(CheckCXXSourceCompiles)
 macro(set_pd_external_path EXTERNAL_PATH)
     message(
         DEPRECATION
-            "set_pd_external_path was removed, you can set PDLIBDIR and run cmake with '-DPD_INSTALL_LIBS=ON' instead"
+            "set_pd_external_path was removed, you can set PD_OUTPUT_PATH instead"
     )
 endmacro(set_pd_external_path)
 
@@ -19,6 +19,12 @@ endmacro(set_pd_external_path)
 macro(set_pd_sources PD_SOURCES)
     message(DEPRECATION "set_pd_sources is deprecated, use pd_set_sources instead")
 endmacro(set_pd_sources)
+
+# ──────────────────────────────────────
+if(DEFINED PDLIBDIR)
+    message(DEPRECATION "PDLIBDIR is deprecated, use PD_LIB_DIR instead")
+    set(PD_LIB_DIR ${PDLIBDIR})
+endif()
 
 macro(pd_set_sources PD_SOURCES)
     set(PD_SOURCES_PATH ${PD_SOURCES})
@@ -28,11 +34,10 @@ endmacro(pd_set_sources)
 # │              Functions               │
 # ╰──────────────────────────────────────╯
 function(pd_add_datafile OBJ_TARGET DATA_FILE)
-    set(BOOLEAN_ARGS)
-    set(ONE_ARGS)
+    set(BOOLEAN_ARGS) # No args for now
+    set(ONE_ARGS) # Define optional arg for TARGET
     set(MULTI_ARGS DESTINATION IGNORE_DIR)
     cmake_parse_arguments(PD_DATAFILE "${BOOLEAN_ARGS}" "${ONE_ARGS}" "${MULTI_ARGS}" ${ARGN})
-
     if(${OBJ_TARGET} MATCHES "~$")
         string(REGEX REPLACE "~$" "_tilde" OBJ_TARGET ${OBJ_TARGET})
     endif()
@@ -41,9 +46,9 @@ function(pd_add_datafile OBJ_TARGET DATA_FILE)
 
         # INSTALL (install-time)
         if(PD_DATAFILE_DESTINATION)
-            set(_DEST "${PDLIBDIR}/${PROJECT_NAME}/${PD_DATAFILE_DESTINATION}")
+            set(_DEST "${PD_LIB_DIR}/${PROJECT_NAME}/${PD_DATAFILE_DESTINATION}")
         else()
-            set(_DEST "${PDLIBDIR}/${PROJECT_NAME}")
+            set(_DEST "${PD_LIB_DIR}/${PROJECT_NAME}")
         endif()
 
         if(IS_DIRECTORY "${DATA_FILE}")
@@ -54,13 +59,6 @@ function(pd_add_datafile OBJ_TARGET DATA_FILE)
 
         # BUILD-TIME COPY
         if(PD_OUTPUT_PATH)
-
-            # Ensure output directory exists
-            add_custom_command(
-                TARGET ${OBJ_TARGET}
-                POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E make_directory "${PD_OUTPUT_PATH}")
-
             if(IS_DIRECTORY "${DATA_FILE}")
                 add_custom_command(
                     TARGET ${OBJ_TARGET}
@@ -71,7 +69,8 @@ function(pd_add_datafile OBJ_TARGET DATA_FILE)
                     TARGET ${OBJ_TARGET}
                     POST_BUILD
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DATA_FILE}"
-                            "${PD_OUTPUT_PATH}/")
+                            "${PD_OUTPUT_PATH}")
+
             endif()
         endif()
 
@@ -168,19 +167,19 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
 
     # fix this
     if(WIN32)
-        if(MSVC)
-            if(PD_FLOATSIZE EQUAL 64)
-                target_link_libraries(${OBJ_TARGET_NAME} PUBLIC "${PDBINDIR}/pd64.lib")
-            else()
-                target_link_libraries(${OBJ_TARGET_NAME} PUBLIC "${PDBINDIR}/pd.lib")
-            endif()
-        elseif(MINGW)
+        if(MINGW)
             if(PD_FLOATSIZE EQUAL 64)
                 target_link_options(${OBJ_TARGET_NAME} PUBLIC "-Wl,--enable-auto-import")
                 target_link_libraries(${OBJ_TARGET_NAME} PUBLIC "${PDBINDIR}/pd64.dll")
             else()
                 target_link_options(${OBJ_TARGET_NAME} PUBLIC "-Wl,--enable-auto-import")
                 target_link_libraries(${OBJ_TARGET_NAME} PUBLIC "${PDBINDIR}/pd.dll")
+            endif()
+        else()
+            if(PD_FLOATSIZE EQUAL 64)
+                target_link_libraries(${OBJ_TARGET_NAME} PUBLIC "${PDBINDIR}/pd64.lib")
+            else()
+                target_link_libraries(${OBJ_TARGET_NAME} PUBLIC "${PDBINDIR}/pd.lib")
             endif()
         endif()
     elseif(APPLE)
@@ -193,11 +192,8 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
 
     strip_trailing_dot(pdx "${PD_EXTENSION}")
     if(NOT PD_BUILD_STATIC_OBJECTS)
-        if (PD_OUTPUT_PATH)
-            install(TARGETS ${OBJ_TARGET_NAME} DESTINATION "${PD_OUTPUT_PATH}")
-        else()  
-            install(TARGETS ${OBJ_TARGET_NAME} DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
-        endif()
+        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}.${pdx}
+                DESTINATION ${PD_LIB_DIR}/${PROJECT_NAME})
     endif()
 
     if(MSVC)
@@ -267,103 +263,98 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
 
     pd_set_lib_ext(${PROJECT_NAME})
     strip_trailing_dot(pdx "${PD_EXTENSION}")
-    pd_add_datafile(${PROJECT_NAME} "${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}.${pdx}")
+    pd_add_datafile(${PROJECT_NAME}
+                    "${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}.${pdx}")
 
 endfunction(add_pd_external)
 
 function(calc_pd_extension)
-    if(EMSCRIPTEN)
-        # no extension required for emscripten
-        return()
-    endif()
+  if(EMSCRIPTEN)
+    # no extension required for emscripten
+    return()
+  endif()
 
-    if(PD_EXTENSION)
-        # already got an extension...
-        return()
-    endif()
+  if(PD_EXTENSION)
+    # already got an extension...
+    return()
+  endif()
 
-    # no extension given, calculate a generic one: .<os>-<cpu>-<floatsize>.<ext>
+  # no extension given, calculate a generic one: .<os>-<cpu>-<floatsize>.<ext>
 
-    # the extension suffix is '.dll' on Windows and '.so' on un*x (aka: everything else)
-    if(WIN32)
-        set(ext "dll")
+  # the extension suffix is '.dll' on Windows and '.so' on un*x (aka: everything else)
+  if(WIN32)
+    set(ext "dll")
+  else()
+    set(ext "so")
+  endif()
+
+  # use the lowercase system_name for the <os>
+  string(TOLOWER "${CMAKE_SYSTEM_NAME}" os)
+  # normalize names
+  if(os STREQUAL "msys")
+    set(os "windows")
+  elseif(os STREQUAL "mingw")
+    set(os "windows")
+  endif()
+  if(os STREQUAL "")
+    message(FATAL_ERROR "Not possible to determine OS name, please set CMAKE_SYSTEM_NAME")
+  endif()
+  message(STATUS "Detected '${os}' for system name '${CMAKE_SYSTEM_NAME}'")
+
+  if(APPLE AND (CMAKE_OSX_ARCHITECTURES STREQUAL ""))
+    # get rid of this: people should actively set CMAKE_OSX_ARCHITECTURES to their desired archs
+    # cf the [docs](https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_ARCHITECTURES.html):
+    # > The value of this variable should be set prior to the first project() [...].
+    # > It is intended to be set locally by the user creating a build tree.
+    set(CMAKE_OSX_ARCHITECTURES
+      "x86_64;arm64"
+      CACHE STRING "Target architectures" FORCE)
+  endif()
+
+  # use the lowercase processor for the <cpu>
+  string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" cpu)
+
+  # OS specific overrides
+  if(APPLE AND (NOT CMAKE_OSX_ARCHITECTURES STREQUAL ""))
+    if(CMAKE_OSX_ARCHITECTURES MATCHES ".*;.*")
+      set(cpu "fat")
+      message(STATUS "Apple universal compilation")
     else()
-        set(ext "so")
+      set(cpu ${CMAKE_OSX_ARCHITECTURES})
+      message(STATUS "Apple ${cpu} compilation")
     endif()
-
-    # use the lowercase system_name for the <os>
-    string(TOLOWER "${CMAKE_SYSTEM_NAME}" os)
-    # normalize names
-    if(os STREQUAL "msys")
-        set(os "windows")
-    elseif(os STREQUAL "mingw")
-        set(os "windows")
+  elseif(WIN32 AND (cpu MATCHES "(x86_64|amd64)"))
+    if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+      # urgh. this shouldn't be needed
+      message(WARNING "Detected CPU ${CMAKE_SYSTEM_PROCESSOR} with a ${CMAKE_SIZEOF_VOID_P}byte pointer...fixing")
+      set(cpu "i386")
     endif()
-    if(os STREQUAL "")
-        message(FATAL_ERROR "Not possible to determine OS name, please set CMAKE_SYSTEM_NAME")
-    endif()
-    message(STATUS "Detected '${os}' for system name '${CMAKE_SYSTEM_NAME}'")
+  endif()
 
-    if(APPLE AND (CMAKE_OSX_ARCHITECTURES STREQUAL ""))
-        # get rid of this: people should actively set CMAKE_OSX_ARCHITECTURES to their desired archs
-        # cf the [docs](https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_ARCHITECTURES.html):
-        # > The value of this variable should be set prior to the first project() [...]. > It is
-        # intended to be set locally by the user creating a build tree.
-        set(CMAKE_OSX_ARCHITECTURES
-            "x86_64;arm64"
-            CACHE STRING "Target architectures" FORCE)
-    endif()
+  # normalize some names
+  if(cpu STREQUAL "x86_64")
+    set(cpu "amd64")
+  elseif(cpu MATCHES "i[0-9]86")
+    set(cpu "i386")
+  elseif(cpu STREQUAL "aarch64")
+    set(cpu "arm64")
+  elseif(cpu MATCHES "arm.*")
+    set(cpu "arm")
+  endif()
 
-    # use the lowercase processor for the <cpu>
-    string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" cpu)
+  if(cpu STREQUAL "")
+    message(FATAL_ERROR "Not possible to determine CPU name, please set CMAKE_SYSTEM_PROCESSOR")
+  endif()
+  message(STATUS "Detected '${cpu}' for system CPU '${CMAKE_SYSTEM_PROCESSOR}'")
 
-    # OS specific overrides
-    if(APPLE AND (NOT CMAKE_OSX_ARCHITECTURES STREQUAL ""))
-        if(CMAKE_OSX_ARCHITECTURES MATCHES ".*;.*")
-            set(cpu "fat")
-            message(STATUS "Apple universal compilation")
-        else()
-            set(cpu ${CMAKE_OSX_ARCHITECTURES})
-            message(STATUS "Apple ${cpu} compilation")
-        endif()
-    elseif(WIN32 AND (cpu MATCHES "(x86_64|amd64)"))
-        if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-            # urgh. this shouldn't be needed
-            message(
-                WARNING
-                    "Detected CPU ${CMAKE_SYSTEM_PROCESSOR} with a ${CMAKE_SIZEOF_VOID_P}byte pointer...fixing"
-            )
-            set(cpu "i386")
-        endif()
-    endif()
-
-    # normalize some names
-    if(cpu STREQUAL "x86_64")
-        set(cpu "amd64")
-    elseif(cpu MATCHES "i[0-9]86")
-        set(cpu "i386")
-    elseif(cpu STREQUAL "aarch64")
-        set(cpu "arm64")
-    elseif(cpu MATCHES "arm.*")
-        set(cpu "arm")
-    endif()
-
-    if(cpu STREQUAL "")
-        message(FATAL_ERROR "Not possible to determine CPU name, please set CMAKE_SYSTEM_PROCESSOR")
-    endif()
-    message(STATUS "Detected '${cpu}' for system CPU '${CMAKE_SYSTEM_PROCESSOR}'")
-
-    set(PD_EXTENSION
-        "${os}-${cpu}-${PD_FLOATSIZE}.${ext}"
-        PARENT_SCOPE)
+  set(PD_EXTENSION "${os}-${cpu}-${PD_FLOATSIZE}.${ext}" PARENT_SCOPE)
 endfunction()
 
 function(strip_trailing_dot var input)
-    string(REGEX REPLACE "^\\.(.*)$" "\\1" tmp "${input}")
-    set(${var}
-        "${tmp}"
-        PARENT_SCOPE)
+  string(REGEX REPLACE "^\\.(.*)$" "\\1" tmp "${input}")
+  set(${var} "${tmp}" PARENT_SCOPE)
 endfunction()
+
 
 # ╭──────────────────────────────────────╮
 # │        Set pd.cmake variables        │
@@ -377,13 +368,14 @@ set(PD_FLOATSIZE
     CACHE STRING "the floatsize of Pd (32 or 64)")
 set_property(CACHE PD_FLOATSIZE PROPERTY STRINGS 32 64)
 if(NOT (PD_FLOATSIZE EQUAL 64 OR PD_FLOATSIZE EQUAL 32))
-    message(FATAL_ERROR "PD_FLOATSIZE must be 32 or 64")
+  message(FATAL_ERROR "PD_FLOATSIZE must be 32 or 64")
 endif()
 
 calc_pd_extension()
 set(PD_EXTENSION
-    "${PD_EXTENSION}"
-    CACHE STRING "Pd extension (e.g. 'pd_linux')")
+  "${PD_EXTENSION}"
+  CACHE STRING "Pd extension (e.g. 'pd_linux')")
+
 
 set(PD_SOURCES_PATH
     ""
@@ -395,7 +387,7 @@ set(PD_ENABLE_TILDE_TARGET_WARNING
 
 set(PD_INSTALL_LIBS
     ON
-    CACHE BOOL "Install Pd Externals on PDLIBDIR")
+    CACHE BOOL "Install Pd Externals on PD_LIB_DIR")
 
 set(PD_BUILD_STATIC_OBJECTS
     OFF
@@ -405,18 +397,18 @@ set(PD_BUILD_STATIC_OBJECTS
 )
 
 # ╭──────────────────────────────────────╮
-# │         Get default PDLIBDIR         │
+# │         Get default PD_LIB_DIR       │
 # ╰──────────────────────────────────────╯
 if(APPLE)
-    set(PDLIBDIR
+    set(PD_LIB_DIR
         "~/Library/Pd"
         CACHE PATH "Path where lib will be installed")
 elseif(UNIX)
-    set(PDLIBDIR
+    set(PD_LIB_DIR
         "/usr/local/lib/pd-externals"
         CACHE PATH "Path where lib will be installed")
 elseif(WIN32)
-    set(PDLIBDIR
+    set(PD_LIB_DIR
         "$ENV{APPDATA}/Pd"
         CACHE PATH "Path where lib will be installed")
 else()
@@ -424,7 +416,7 @@ else()
 endif()
 
 if(PD_INSTALL_LIBS)
-    message(STATUS "Pd Install Libs Path: ${PDLIBDIR}")
+    message(STATUS "Pd Install Libs Path: ${PD_LIB_DIR}")
 endif()
 
 # ╭──────────────────────────────────────╮
