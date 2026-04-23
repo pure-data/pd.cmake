@@ -9,10 +9,7 @@ include(CheckCXXSourceCompiles)
 # │                Macros                │
 # ╰──────────────────────────────────────╯
 macro(set_pd_external_path EXTERNAL_PATH)
-    message(
-        DEPRECATION
-            "set_pd_external_path was removed, you can set PD_OUTPUT_PATH instead"
-    )
+    message(DEPRECATION "set_pd_external_path was removed, you can set PD_OUTPUT_PATH instead")
 endmacro(set_pd_external_path)
 
 # ──────────────────────────────────────
@@ -70,6 +67,21 @@ function(pd_add_datafile OBJ_TARGET DATA_FILE)
                     POST_BUILD
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DATA_FILE}"
                             "${PD_OUTPUT_PATH}")
+
+            endif()
+        else()
+            if(IS_DIRECTORY "${DATA_FILE}")
+                add_custom_command(
+                    TARGET ${OBJ_TARGET}
+                    POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_directory "${DATA_FILE}"
+                            "${CMAKE_BINARY_DIR}/${PROJECT_NAME}")
+            else()
+                add_custom_command(
+                    TARGET ${OBJ_TARGET}
+                    POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DATA_FILE}"
+                            "${CMAKE_BINARY_DIR}/${PROJECT_NAME}")
 
             endif()
         endif()
@@ -134,20 +146,18 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
             PROPERTY SUFFIX)
     endif()
 
-    if(PD_OUTPUT_PATH)
-        set_target_properties(
-            ${OBJ_TARGET_NAME}
-            PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${PD_OUTPUT_PATH}"
-                       ARCHIVE_OUTPUT_DIRECTORY "${PD_OUTPUT_PATH}"
-                       RUNTIME_OUTPUT_DIRECTORY "${PD_OUTPUT_PATH}")
+    if(DEFINED PD_OUTPUT_PATH AND NOT PD_OUTPUT_PATH STREQUAL "")
+        set(PD_DEST "${PD_OUTPUT_PATH}")
     else()
-        set_target_properties(${OBJ_TARGET_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY
-                                                            ${CMAKE_CURRENT_BINARY_DIR})
-        set_target_properties(${OBJ_TARGET_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY
-                                                            ${CMAKE_CURRENT_BINARY_DIR})
-        set_target_properties(${OBJ_TARGET_NAME} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY
-                                                            ${CMAKE_CURRENT_BINARY_DIR})
+        set(PD_DEST "${CMAKE_BINARY_DIR}/${PROJECT_NAME}")
     endif()
+
+    add_custom_command(
+        TARGET ${OBJ_TARGET_NAME}
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${PD_DEST}"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${OBJ_TARGET_NAME}>"
+                "${PD_DEST}")
 
     # Check if CXX_FLAGS is defined, if true set the flags
     if(DEFINED PD_EXTERNAL_CXX_FLAGS)
@@ -166,37 +176,64 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
     target_include_directories(${OBJ_TARGET_NAME} PUBLIC ${PD_SOURCES_PATH}) # Add Pd Includes
 
     # fix this
-    if(WIN32)
-        if(MINGW)
-            if(PD_FLOATSIZE EQUAL 64)
-                target_link_options(${OBJ_TARGET_NAME} PUBLIC "-Wl,--enable-auto-import")
-                target_link_libraries(${OBJ_TARGET_NAME} PUBLIC "${PDBINDIR}/pd64.dll")
-            else()
-                target_link_options(${OBJ_TARGET_NAME} PUBLIC "-Wl,--enable-auto-import")
-                target_link_libraries(${OBJ_TARGET_NAME} PUBLIC "${PDBINDIR}/pd.dll")
-            endif()
-        else()
-            if(PD_FLOATSIZE EQUAL 64)
-                target_link_libraries(${OBJ_TARGET_NAME} PUBLIC "${PDBINDIR}/pd64.lib")
-            else()
-                target_link_libraries(${OBJ_TARGET_NAME} PUBLIC "${PDBINDIR}/pd.lib")
-            endif()
+    if(UNIX
+       AND NOT APPLE
+       AND NOT EMSCRIPTEN) # Linux
+        target_compile_definitions(${OBJ_TARGET_NAME} PUBLIC UNIX)
+        target_link_options(${OBJ_TARGET_NAME} PUBLIC -rdynamic -fPIC -Wl,-rpath,\$ORIGIN
+                            -Wl,--enable-new-dtags)
+        target_link_libraries(${OBJ_TARGET_NAME} PUBLIC c m stdc++)
+    elseif(EMSCRIPTEN) # Emscripten
+        target_compile_definitions(${OBJ_TARGET_NAME} PUBLIC UNIX)
+        target_link_options(${OBJ_TARGET_NAME} PUBLIC -rdynamic -fPIC)
+    elseif(APPLE) # macOS
+        target_compile_definitions(${OBJ_TARGET_NAME} PUBLIC UNIX MACOSX)
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+            target_compile_options(${OBJ_TARGET_NAME} PUBLIC -fcheck-new)
         endif()
-    elseif(APPLE)
-        set_target_properties(${OBJ_TARGET_NAME} PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
-    endif()
+        target_link_options(${OBJ_TARGET_NAME} PUBLIC -undefined suppress -flat_namespace)
+        target_link_libraries(${OBJ_TARGET_NAME} PUBLIC c)
+    elseif(WIN32 AND MINGW)
+        target_compile_definitions(${OBJ_TARGET_NAME} PUBLIC MSW NT)
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8) # x86_64
+            target_compile_definitions(${OBJ_TARGET_NAME} PUBLIC PD_LONGINTTYPE=__int64)
+            target_compile_options(${OBJ_TARGET_NAME} PUBLIC -march=core2 -msse -msse2 -msse3
+                                                             -mfpmath=sse)
+        elseif(CMAKE_SIZEOF_VOID_P EQUAL 4) # i686
+            target_compile_options(${OBJ_TARGET_NAME} PUBLIC -march=pentium4 -msse -msse2
+                                                             -mfpmath=sse)
+        endif()
+        target_link_options(${OBJ_TARGET_NAME} PUBLIC -static-libgcc -static-libstdc++ -shared
+                            -Wl,--enable-auto-import)
 
-    if(NOT PD_FLOATSIZE EQUAL 32)
-        target_compile_definitions(${OBJ_TARGET_NAME} PUBLIC PD_FLOATSIZE=${PD_FLOATSIZE})
-    endif()
+        if(PD_FLOATSIZE EQUAL 64)
+            target_link_libraries(${OBJ_TARGET_NAME} PUBLIC "${PDBINDIR}/pd64.dll")
+        else()
+            target_link_libraries(${OBJ_TARGET_NAME} PUBLIC "${PDBINDIR}/pd.dll")
+        endif()
+        set_target_properties(${OBJ_TARGET_NAME} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+    elseif(MSVC OR (WIN32 AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang"))
+        target_compile_definitions(${OBJ_TARGET_NAME} PUBLIC MSW NT)
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+            target_compile_definitions(${OBJ_TARGET_NAME} PUBLIC PD_LONGINTTYPE=__int64)
+        endif()
+        # MSVC does not use -march/-msse flags like GCC Use /arch instead if needed
+        set_target_properties(${OBJ_TARGET_NAME} PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS ON)
+        if(PD_FLOATSIZE EQUAL 64)
+            target_link_libraries(${OBJ_TARGET_NAME} PUBLIC "${PDBINDIR}/pd64.lib")
+        else()
+            target_link_libraries(${OBJ_TARGET_NAME} PUBLIC "${PDBINDIR}/pd.lib")
+        endif()
 
-    strip_trailing_dot(pdx "${PD_EXTENSION}")
-    if(NOT PD_BUILD_STATIC_OBJECTS)
-        install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}.${pdx}
-                DESTINATION ${PD_LIB_DIR}/${PROJECT_NAME})
-    endif()
+        # Export setup symbol
+        string(FIND ${PD_EXTERNAL_NAME} "." NAME_HAS_DOT)
+        if(NAME_HAS_DOT EQUAL -1)
+            string(REPLACE "~" "_tilde" EXPORT_FUNCTION "${PD_EXTERNAL_NAME}_setup")
+        else()
+            string(REPLACE "." "0x2e" TEMP_NAME "${PD_EXTERNAL_NAME}")
+            string(REPLACE "~" "_tilde" EXPORT_FUNCTION "setup_${TEMP_NAME}")
+        endif()
 
-    if(MSVC)
         string(FIND ${PD_EXTERNAL_NAME} "." NAME_HAS_DOT)
         string(FIND ${PD_EXTERNAL_NAME} "~" NAME_HAS_TILDE)
         if(NAME_HAS_DOT EQUAL -1)
@@ -205,10 +242,15 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
             string(REPLACE "." "0x2e" TEMP_NAME "${PD_EXTERNAL_NAME}")
             string(REPLACE "~" "_tilde" EXPORT_FUNCTION "setup_${TEMP_NAME}")
         endif()
-        set_property(
-            TARGET ${OBJ_TARGET_NAME}
-            APPEND_STRING
-            PROPERTY LINK_FLAGS "/export:${EXPORT_FUNCTION}")
+    endif()
+
+    if(NOT PD_FLOATSIZE EQUAL 32)
+        target_compile_definitions(${OBJ_TARGET_NAME} PUBLIC PD_FLOATSIZE=${PD_FLOATSIZE})
+    endif()
+
+    strip_trailing_dot(pdx "${PD_EXTENSION}")
+    if(NOT PD_BUILD_STATIC_OBJECTS)
+        pd_add_datafile("${OBJ_TARGET_NAME}" "$<TARGET_FILE:${OBJ_TARGET_NAME}>")
     endif()
 
 endfunction(pd_add_external)
@@ -263,98 +305,103 @@ function(add_pd_external PROJECT_NAME EXTERNAL_NAME EXTERNAL_SOURCES)
 
     pd_set_lib_ext(${PROJECT_NAME})
     strip_trailing_dot(pdx "${PD_EXTENSION}")
-    pd_add_datafile(${PROJECT_NAME}
-                    "${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}.${pdx}")
+    pd_add_datafile(${PROJECT_NAME} "${CMAKE_CURRENT_BINARY_DIR}/${PD_EXTERNAL_NAME}.${pdx}")
 
 endfunction(add_pd_external)
 
 function(calc_pd_extension)
-  if(EMSCRIPTEN)
-    # no extension required for emscripten
-    return()
-  endif()
+    if(EMSCRIPTEN)
+        # no extension required for emscripten
+        return()
+    endif()
 
-  if(PD_EXTENSION)
-    # already got an extension...
-    return()
-  endif()
+    if(PD_EXTENSION)
+        # already got an extension...
+        return()
+    endif()
 
-  # no extension given, calculate a generic one: .<os>-<cpu>-<floatsize>.<ext>
+    # no extension given, calculate a generic one: .<os>-<cpu>-<floatsize>.<ext>
 
-  # the extension suffix is '.dll' on Windows and '.so' on un*x (aka: everything else)
-  if(WIN32)
-    set(ext "dll")
-  else()
-    set(ext "so")
-  endif()
-
-  # use the lowercase system_name for the <os>
-  string(TOLOWER "${CMAKE_SYSTEM_NAME}" os)
-  # normalize names
-  if(os STREQUAL "msys")
-    set(os "windows")
-  elseif(os STREQUAL "mingw")
-    set(os "windows")
-  endif()
-  if(os STREQUAL "")
-    message(FATAL_ERROR "Not possible to determine OS name, please set CMAKE_SYSTEM_NAME")
-  endif()
-  message(STATUS "Detected '${os}' for system name '${CMAKE_SYSTEM_NAME}'")
-
-  if(APPLE AND (CMAKE_OSX_ARCHITECTURES STREQUAL ""))
-    # get rid of this: people should actively set CMAKE_OSX_ARCHITECTURES to their desired archs
-    # cf the [docs](https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_ARCHITECTURES.html):
-    # > The value of this variable should be set prior to the first project() [...].
-    # > It is intended to be set locally by the user creating a build tree.
-    set(CMAKE_OSX_ARCHITECTURES
-      "x86_64;arm64"
-      CACHE STRING "Target architectures" FORCE)
-  endif()
-
-  # use the lowercase processor for the <cpu>
-  string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" cpu)
-
-  # OS specific overrides
-  if(APPLE AND (NOT CMAKE_OSX_ARCHITECTURES STREQUAL ""))
-    if(CMAKE_OSX_ARCHITECTURES MATCHES ".*;.*")
-      set(cpu "fat")
-      message(STATUS "Apple universal compilation")
+    # the extension suffix is '.dll' on Windows and '.so' on un*x (aka: everything else)
+    if(WIN32)
+        set(ext "dll")
     else()
-      set(cpu ${CMAKE_OSX_ARCHITECTURES})
-      message(STATUS "Apple ${cpu} compilation")
+        set(ext "so")
     endif()
-  elseif(WIN32 AND (cpu MATCHES "(x86_64|amd64)"))
-    if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-      # urgh. this shouldn't be needed
-      message(WARNING "Detected CPU ${CMAKE_SYSTEM_PROCESSOR} with a ${CMAKE_SIZEOF_VOID_P}byte pointer...fixing")
-      set(cpu "i386")
+
+    # use the lowercase system_name for the <os>
+    string(TOLOWER "${CMAKE_SYSTEM_NAME}" os)
+    # normalize names
+    if(os STREQUAL "msys")
+        set(os "windows")
+    elseif(os STREQUAL "mingw")
+        set(os "windows")
     endif()
-  endif()
+    if(os STREQUAL "")
+        message(FATAL_ERROR "Not possible to determine OS name, please set CMAKE_SYSTEM_NAME")
+    endif()
+    message(STATUS "Detected '${os}' for system name '${CMAKE_SYSTEM_NAME}'")
 
-  # normalize some names
-  if(cpu STREQUAL "x86_64")
-    set(cpu "amd64")
-  elseif(cpu MATCHES "i[0-9]86")
-    set(cpu "i386")
-  elseif(cpu STREQUAL "aarch64")
-    set(cpu "arm64")
-  elseif(cpu MATCHES "arm.*")
-    set(cpu "arm")
-  endif()
+    if(APPLE AND (CMAKE_OSX_ARCHITECTURES STREQUAL ""))
+        # get rid of this: people should actively set CMAKE_OSX_ARCHITECTURES to their desired archs
+        # cf the [docs](https://cmake.org/cmake/help/latest/variable/CMAKE_OSX_ARCHITECTURES.html):
+        # > The value of this variable should be set prior to the first project() [...]. > It is
+        # intended to be set locally by the user creating a build tree.
+        set(CMAKE_OSX_ARCHITECTURES
+            "x86_64;arm64"
+            CACHE STRING "Target architectures" FORCE)
+    endif()
 
-  if(cpu STREQUAL "")
-    message(FATAL_ERROR "Not possible to determine CPU name, please set CMAKE_SYSTEM_PROCESSOR")
-  endif()
-  message(STATUS "Detected '${cpu}' for system CPU '${CMAKE_SYSTEM_PROCESSOR}'")
+    # use the lowercase processor for the <cpu>
+    string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" cpu)
 
-  set(PD_EXTENSION "${os}-${cpu}-${PD_FLOATSIZE}.${ext}" PARENT_SCOPE)
+    # OS specific overrides
+    if(APPLE AND (NOT CMAKE_OSX_ARCHITECTURES STREQUAL ""))
+        if(CMAKE_OSX_ARCHITECTURES MATCHES ".*;.*")
+            set(cpu "fat")
+            message(STATUS "Apple universal compilation")
+        else()
+            set(cpu ${CMAKE_OSX_ARCHITECTURES})
+            message(STATUS "Apple ${cpu} compilation")
+        endif()
+    elseif(WIN32 AND (cpu MATCHES "(x86_64|amd64)"))
+        if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+            # urgh. this shouldn't be needed
+            message(
+                WARNING
+                    "Detected CPU ${CMAKE_SYSTEM_PROCESSOR} with a ${CMAKE_SIZEOF_VOID_P}byte pointer...fixing"
+            )
+            set(cpu "i386")
+        endif()
+    endif()
+
+    # normalize some names
+    if(cpu STREQUAL "x86_64")
+        set(cpu "amd64")
+    elseif(cpu MATCHES "i[0-9]86")
+        set(cpu "i386")
+    elseif(cpu STREQUAL "aarch64")
+        set(cpu "arm64")
+    elseif(cpu MATCHES "arm.*")
+        set(cpu "arm")
+    endif()
+
+    if(cpu STREQUAL "")
+        message(FATAL_ERROR "Not possible to determine CPU name, please set CMAKE_SYSTEM_PROCESSOR")
+    endif()
+    message(STATUS "Detected '${cpu}' for system CPU '${CMAKE_SYSTEM_PROCESSOR}'")
+
+    set(PD_EXTENSION
+        "${os}-${cpu}-${PD_FLOATSIZE}.${ext}"
+        PARENT_SCOPE)
 endfunction()
 
 function(strip_trailing_dot var input)
-  string(REGEX REPLACE "^\\.(.*)$" "\\1" tmp "${input}")
-  set(${var} "${tmp}" PARENT_SCOPE)
+    string(REGEX REPLACE "^\\.(.*)$" "\\1" tmp "${input}")
+    set(${var}
+        "${tmp}"
+        PARENT_SCOPE)
 endfunction()
-
 
 # ╭──────────────────────────────────────╮
 # │        Set pd.cmake variables        │
@@ -368,14 +415,13 @@ set(PD_FLOATSIZE
     CACHE STRING "the floatsize of Pd (32 or 64)")
 set_property(CACHE PD_FLOATSIZE PROPERTY STRINGS 32 64)
 if(NOT (PD_FLOATSIZE EQUAL 64 OR PD_FLOATSIZE EQUAL 32))
-  message(FATAL_ERROR "PD_FLOATSIZE must be 32 or 64")
+    message(FATAL_ERROR "PD_FLOATSIZE must be 32 or 64")
 endif()
 
 calc_pd_extension()
 set(PD_EXTENSION
-  "${PD_EXTENSION}"
-  CACHE STRING "Pd extension (e.g. 'pd_linux')")
-
+    "${PD_EXTENSION}"
+    CACHE STRING "Pd extension (e.g. 'pd_linux')")
 
 set(PD_SOURCES_PATH
     ""
