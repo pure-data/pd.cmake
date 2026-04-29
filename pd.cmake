@@ -43,9 +43,9 @@ function(pd_add_datafile OBJ_TARGET DATA_FILE)
 
         # INSTALL (install-time)
         if(PD_DATAFILE_DESTINATION)
-            set(_DEST "${PD_LIB_DIR}/${PROJECT_NAME}/${PD_DATAFILE_DESTINATION}")
+            set(_DEST "${PD_LIB_DIR}/${CMAKE_PROJECT_NAME}/${PD_DATAFILE_DESTINATION}")
         else()
-            set(_DEST "${PD_LIB_DIR}/${PROJECT_NAME}")
+            set(_DEST "${PD_LIB_DIR}/${CMAKE_PROJECT_NAME}")
         endif()
 
         if(IS_DIRECTORY "${DATA_FILE}")
@@ -75,13 +75,13 @@ function(pd_add_datafile OBJ_TARGET DATA_FILE)
                     TARGET ${OBJ_TARGET}
                     POST_BUILD
                     COMMAND ${CMAKE_COMMAND} -E copy_directory "${DATA_FILE}"
-                            "${CMAKE_BINARY_DIR}/${PROJECT_NAME}")
+                            "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}")
             else()
                 add_custom_command(
                     TARGET ${OBJ_TARGET}
                     POST_BUILD
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DATA_FILE}"
-                            "${CMAKE_BINARY_DIR}/${PROJECT_NAME}")
+                            "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}")
 
             endif()
         endif()
@@ -174,18 +174,17 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
         target_link_libraries(${OBJ_TARGET_NAME} PUBLIC ${PD_EXTERNAL_LINK_LIBRARIES})
     endif()
     target_include_directories(${OBJ_TARGET_NAME} PUBLIC ${PD_SOURCES_PATH}) # Add Pd Includes
+    set_target_properties(${OBJ_TARGET_NAME} PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
     # fix this
     if(UNIX
        AND NOT APPLE
        AND NOT EMSCRIPTEN) # Linux
         target_compile_definitions(${OBJ_TARGET_NAME} PUBLIC UNIX)
-        target_link_options(${OBJ_TARGET_NAME} PUBLIC -rdynamic -fPIC -Wl,-rpath,\$ORIGIN
-                            -Wl,--enable-new-dtags)
+        target_link_options(${OBJ_TARGET_NAME} PUBLIC -Wl,-rpath,\$ORIGIN -Wl,--enable-new-dtags)
         target_link_libraries(${OBJ_TARGET_NAME} PUBLIC c m stdc++)
     elseif(EMSCRIPTEN) # Emscripten
         target_compile_definitions(${OBJ_TARGET_NAME} PUBLIC UNIX)
-        target_link_options(${OBJ_TARGET_NAME} PUBLIC -rdynamic -fPIC)
     elseif(APPLE) # macOS
         target_compile_definitions(${OBJ_TARGET_NAME} PUBLIC UNIX MACOSX)
         if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
