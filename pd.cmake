@@ -149,7 +149,7 @@ function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
     if(DEFINED PD_OUTPUT_PATH AND NOT PD_OUTPUT_PATH STREQUAL "")
         set(PD_DEST "${PD_OUTPUT_PATH}")
     else()
-        set(PD_DEST "${CMAKE_BINARY_DIR}/${PROJECT_NAME}")
+        set(PD_DEST "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}")
     endif()
 
     add_custom_command(
