@@ -31,6 +31,10 @@ endmacro(pd_set_sources)
 # │              Functions               │
 # ╰──────────────────────────────────────╯
 function(pd_add_datafile OBJ_TARGET DATA_FILE)
+    if(PD_IGNORE_DATAFILES)
+        return()
+    endif()
+
     set(BOOLEAN_ARGS) # No args for now
     set(ONE_ARGS) # Define optional arg for TARGET
     set(MULTI_ARGS DESTINATION IGNORE_DIR)
@@ -107,7 +111,6 @@ endmacro(pd_set_lib_ext)
 
 # ──────────────────────────────────────
 function(pd_add_external PD_EXTERNAL_NAME EXTERNAL_SOURCES)
-
     set(BOOLEAN_ARGS) # No args for now
     set(ONE_ARGS TARGET EXTERNAL_NAME) # Define optional arg for TARGET
     set(MULTI_ARGS CXX_FLAGS C_FLAGS LINK_LIBRARIES) # Define multi args, CXX_FLAGS C_FLAGS
