@@ -44,6 +44,11 @@ function(pd_add_datafile OBJ_TARGET DATA_FILE)
     endif()
 
     foreach(DATA_FILE ${DATA_FILE})
+        if(IS_ABSOLUTE "${DATA_FILE}" OR DATA_FILE MATCHES "^\\$<")
+            set(_DATA_FILE "${DATA_FILE}")
+        else()
+            set(_DATA_FILE "${CMAKE_CURRENT_SOURCE_DIR}/${DATA_FILE}")
+        endif()
 
         # INSTALL (install-time)
         if(PD_DATAFILE_DESTINATION)
@@ -52,39 +57,39 @@ function(pd_add_datafile OBJ_TARGET DATA_FILE)
             set(_DEST "${PD_LIB_DIR}/${CMAKE_PROJECT_NAME}")
         endif()
 
-        if(IS_DIRECTORY "${DATA_FILE}")
-            install(DIRECTORY "${DATA_FILE}" DESTINATION "${_DEST}")
+        if(IS_DIRECTORY "${_DATA_FILE}")
+            install(DIRECTORY "${_DATA_FILE}" DESTINATION "${_DEST}")
         else()
-            install(FILES "${DATA_FILE}" DESTINATION "${_DEST}")
+            install(FILES "${_DATA_FILE}" DESTINATION "${_DEST}")
         endif()
 
         # BUILD-TIME COPY
         if(PD_OUTPUT_PATH)
-            if(IS_DIRECTORY "${DATA_FILE}")
+            if(IS_DIRECTORY "${_DATA_FILE}")
                 add_custom_command(
                     TARGET ${OBJ_TARGET}
                     POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_directory "${DATA_FILE}" "${PD_OUTPUT_PATH}")
+                    COMMAND ${CMAKE_COMMAND} -E copy_directory "${_DATA_FILE}" "${PD_OUTPUT_PATH}")
             else()
                 add_custom_command(
                     TARGET ${OBJ_TARGET}
                     POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DATA_FILE}"
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_DATA_FILE}"
                             "${PD_OUTPUT_PATH}")
 
             endif()
         else()
-            if(IS_DIRECTORY "${DATA_FILE}")
+            if(IS_DIRECTORY "${_DATA_FILE}")
                 add_custom_command(
                     TARGET ${OBJ_TARGET}
                     POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_directory "${DATA_FILE}"
+                    COMMAND ${CMAKE_COMMAND} -E copy_directory "${_DATA_FILE}"
                             "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}")
             else()
                 add_custom_command(
                     TARGET ${OBJ_TARGET}
                     POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${DATA_FILE}"
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_DATA_FILE}"
                             "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}")
 
             endif()
