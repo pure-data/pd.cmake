@@ -36,7 +36,7 @@ jobs:
                   brew install pd
             - name: Build
               run: |
-                  cmake . -B build -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DPD_FLOATSIZE=${{ matrix.precision }}
+                  cmake . -B build -DPD_LIB_DIR=./ -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DPD_FLOATSIZE=${{ matrix.precision }}
                   cmake --build build --parallel
             - name: Upload Object
               uses: actions/upload-artifact@v4
@@ -72,7 +72,7 @@ jobs:
             - name: Configure
               run: |
                   arch="${{ steps.compiler.outputs.arch }}"
-                  cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release ${arch:+-DCMAKE_C_COMPILER=${arch}-gcc -DCMAKE_CXX_COMPILER=${arch}-g++}
+                  cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPD_LIB_DIR=./ -DCMAKE_BUILD_TYPE=Release ${arch:+-DCMAKE_C_COMPILER=${arch}-gcc -DCMAKE_CXX_COMPILER=${arch}-g++}
             - name: Build Object
               run: |
                   cmake --build build -- -j$(nproc)
@@ -113,7 +113,7 @@ jobs:
               shell: msys2 {0}
               if: matrix.compiler == 'mingw'
               run: |
-                  cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPDLIBDIR=./ -DCMAKE_BUILD_TYPE=Release
+                  cmake . -B build -DPD_FLOATSIZE=${{ matrix.precision }} -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_SYSTEM_PROCESSOR=${{ matrix.arch }} -DPD_LIB_DIR=./ -DCMAKE_BUILD_TYPE=Release
                   cmake --build build --parallel
             - name: Upload
               uses: actions/upload-artifact@v4
