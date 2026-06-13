@@ -34,6 +34,14 @@ jobs:
             - name: Install PureData and Deps
               run: |
                   brew install pd
+            - name: Build just Intel
+              run: |
+                  cmake . -B build-intel -DPD_LIB_DIR=./ -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="x86_64" -DPD_FLOATSIZE=${{ matrix.precision }}
+                  cmake --build build-intel --parallel
+            - name: Build just ARM64 (M1...M5)
+              run: |
+                  cmake . -B build-arm -DPD_LIB_DIR=./ -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64" -DPD_FLOATSIZE=${{ matrix.precision }}
+                  cmake --build build-arm --parallel
             - name: Build
               run: |
                   cmake . -B build -DPD_LIB_DIR=./ -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DPD_FLOATSIZE=${{ matrix.precision }}
