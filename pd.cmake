@@ -69,13 +69,15 @@ function(pd_add_datafile OBJ_TARGET DATA_FILE)
                 add_custom_command(
                     TARGET ${OBJ_TARGET}
                     POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_directory "${_DATA_FILE}" "${PD_OUTPUT_PATH}")
+                    COMMAND ${CMAKE_COMMAND} -E copy_directory "${_DATA_FILE}" "${PD_OUTPUT_PATH}"
+                    VERBATIM)
             else()
                 add_custom_command(
                     TARGET ${OBJ_TARGET}
                     POST_BUILD
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_DATA_FILE}"
-                            "${PD_OUTPUT_PATH}")
+                            "${PD_OUTPUT_PATH}"
+                    VERBATIM)
 
             endif()
         else()
@@ -84,13 +86,15 @@ function(pd_add_datafile OBJ_TARGET DATA_FILE)
                     TARGET ${OBJ_TARGET}
                     POST_BUILD
                     COMMAND ${CMAKE_COMMAND} -E copy_directory "${_DATA_FILE}"
-                            "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}")
+                            "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}"
+                    VERBATIM)
             else()
                 add_custom_command(
                     TARGET ${OBJ_TARGET}
                     POST_BUILD
                     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_DATA_FILE}"
-                            "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}")
+                            "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}"
+                    VERBATIM)
 
             endif()
         endif()
