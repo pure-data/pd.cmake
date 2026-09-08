@@ -1,3 +1,5 @@
+include_guard(GLOBAL)
+
 # check if cmake version is higher than 3.19, we need cmake_language
 if(${CMAKE_VERSION} VERSION_LESS "3.19")
     message(FATAL_ERROR "pd.cmake requires Cmake Version 3.19 or newer")
